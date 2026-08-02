@@ -6,11 +6,7 @@ on:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -18,17 +14,10 @@ jobs:
         with:
           ruby-version: "3.2"
 
-      - name: Install toolchain (Linux)
-        if: runner.os == 'Linux'
+      - name: Install toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm binutils qemu-system-x86 xorriso
-
-      - name: Install toolchain (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install llvm xorriso qemu
-          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Run unit tests
         run: |

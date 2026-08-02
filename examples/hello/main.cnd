@@ -1,0 +1,15 @@
+use "std/io.cnd";
+
+fn main() -> i32 {
+    let greetings = [
+        "Hello world",
+        "Привет, мир!",
+        "¡Hola Mundo!",
+        "Привіт, світе!"
+        ];
+
+    for value in greetings {
+        println(value);
+    }
+    return 0;
+}

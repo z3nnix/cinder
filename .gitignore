@@ -1,0 +1,8 @@
+# compiler intermediates
+*.ll
+*.o
+*.tmp
+*.bin
+
+# compiled example binaries
+examples/*/main

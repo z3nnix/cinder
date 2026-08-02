@@ -1,0 +1,104 @@
+use "std/io.cnd";
+use "chip8.cnd";
+
+extern fn usleep(usec: u32) -> i32;
+
+const FRAME_USEC = 16666;
+ 
+fn demo_rom() -> [57]u8 {
+    return [
+        0x00, 0xE0,                  
+        0x6D, 0x08, 0xFD, 0x15,      
+        0xA2, 0x34,                  
+        0x60, 0x10, 0x61, 0x10,      
+        0x62, 0x01, 0x63, 0x01,      
+        0xD0, 0x15,                  
+        0xFD, 0x07, 0x3D, 0x00,      
+        0x12, 0x12,                  
+        0xD0, 0x15,                  
+        0x80, 0x24, 0x81, 0x34,      
+        0x40, 0x39, 0x62, 0xFF,      
+        0x40, 0x00, 0x62, 0x01,      
+        0x41, 0x1B, 0x63, 0xFF,      
+        0x41, 0x00, 0x63, 0x01,      
+        0x6D, 0x08, 0xFD, 0x15,      
+        0x12, 0x10,                  
+        0x18, 0x3C, 0x7E, 0x3C, 0x18  
+    ];
+}
+
+fn esc_code(code: []u8) {
+    putchar(27);
+    putchar(91);
+    for i in 0usize..code.len {
+        putchar(code[i] as i32);
+    }
+}
+
+fn render(c: *Chip8) {
+    esc_code("2J");
+    esc_code("H");
+    for y in 0u8..32u8 {
+        for x in 0u8..64u8 {
+            putchar(if fb_pixel(c, x, y) == 1 { 35 } else { 32 });
+        }
+        putchar(10);
+    }
+}
+
+fn hex_digit(d: u8) -> u8 {
+    if d < 10 { return 48 + d; }
+    return 65 + (d - 10);
+}
+
+fn print_hex16(v: u16) {
+    for i in 0u8..4u8 {
+        let shift = 12 - (i as u16) * 4;
+        putchar(hex_digit(((v >> shift) & 0xF) as u8) as i32);
+    }
+}
+
+fn print_status(c: *Chip8, frame: u32) {
+    putchar(10);
+    print("pc=0x"); print_hex16(c.pc);
+    print("  i=0x"); print_hex16(c.i_reg);
+    print("  dt="); print_u32(c.dt as u32);
+    print("  sp="); print_u32(c.sp as u32);
+    print("  frames="); print_u32(frame);
+    print("  cycles="); print_u32(c.cycles);
+    print_newline();
+}
+
+fn run() -> i32 {
+    let rom = demo_rom();
+    let c = chip8_new();
+    load_rom(&c, rom[..]);
+
+    let mut frame: u32 = 0;
+    loop {
+        render(&c);
+        print_status(&c, frame);
+        for _ in 0..20 {
+            tick(&c);
+        }
+        tick_timers(&c);
+        usleep(FRAME_USEC as u32);
+
+        frame += 1;
+        if frame >= 360 { break; }
+    }
+
+    putchar(10);
+    print("CHIP-8 demo finished: ");
+    print_u32(frame);
+    print(" frames, ");
+    print_u32(c.cycles);
+    print(" instructions executed, exit ok\n");
+
+    chip8_free(&c);
+    return 0;
+}
+
+fn main() -> i32 {
+    return run();
+}

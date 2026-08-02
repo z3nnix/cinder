@@ -1,0 +1,29 @@
+use "std/io.cnd";
+
+extern fn malloc(size: usize) -> *u8;
+extern fn free(p: *u8);
+extern fn abs(n: i32) -> i32;
+
+fn main() -> i32 {
+    let msg = c"hello, libc!";
+    print("strlen(\"hello, libc!\") = ");
+    print_u64(strlen(msg) as u64);
+    print_newline();
+
+    let p = malloc(64);
+    unsafe {
+        p[0] = 65;
+        p[1] = 66;
+        p[2] = 67;
+        p[3] = 0;
+    }
+    print("malloc buffer via printf: ");
+    printf(c"%s\n", p);
+    fflush(null);
+    free(p);
+
+    print("abs(-42) = ");
+    print_i32(abs(-42));
+    print_newline();
+    return 0;
+}

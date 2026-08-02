@@ -1,0 +1,52 @@
+use "std/io.cnd";
+
+fn bump(p: *i32) -> i32 {
+    unsafe {
+        *p += 10;
+        return *p;
+    }
+}
+
+fn swap(a: *i32, b: *i32) {
+    unsafe {
+        let t = *a;
+        *a = *b;
+        *b = t;
+    }
+}
+
+fn main() -> i32 {
+    let mut x = 5;
+    let mut y = 20;
+
+    print("before: x = ");
+    print_i32(x);
+    print(", y = ");
+    print_i32(y);
+    print_newline();
+
+    swap(&x, &y);
+    print("after:  x = ");
+    print_i32(x);
+    print(", y = ");
+    print_i32(y);
+    print_newline();
+
+    bump(&x);
+    print("bump(x): x = ");
+    print_i32(x);
+    print_newline();
+
+    let s = "hello";
+    let p = s.ptr;
+    unsafe {
+        let first = *p;
+        print("first byte of \"hello\" = ");
+        print_i32(first as i32);
+        print_newline();
+    }
+    print("len(\"hello\") = ");
+    print_u32(s.len as u32);
+    print_newline();
+    return 0;
+}

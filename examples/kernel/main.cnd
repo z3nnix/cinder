@@ -1,0 +1,33 @@
+use "std/x86.cnd";
+
+unsafe fn uart_init() {
+    outb(0x3F9, 0x00);
+    outb(0x3FB, 0x80);
+    outb(0x3F8, 0x03);
+    outb(0x3F9, 0x00);
+    outb(0x3FB, 0x03);
+}
+
+unsafe fn uart_write_byte(b: u8) {
+    while (inb(0x3FD) & 0x20) == 0 {
+        asm("nop");
+    }
+    outb(0x3F8, b);
+}
+
+unsafe fn uart_write_str(s: []u8) {
+    for i in 0 .. s.len {
+        uart_write_byte(s[i]);
+    }
+}
+
+export fn kernel_main() {
+    let msg: []u8 = "Hello world!\n";
+    unsafe {
+        uart_init();
+        uart_write_str(msg);
+        loop {
+            asm("hlt");
+        }
+    }
+}

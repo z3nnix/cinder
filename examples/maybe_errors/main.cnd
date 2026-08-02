@@ -1,0 +1,52 @@
+use "std/io.cnd";
+
+enum Err {
+    DivisionByZero;
+}
+
+fn safe_div(a: i32, b: i32) !i32 {
+    if b == 0 {
+        return Err.DivisionByZero;
+    }
+    return a / b;
+}
+
+fn double_div(a: i32, b: i32) !i32 {
+    let r = safe_div(a, b)?;
+    return r * 2;
+}
+
+fn try_div(label: []u8, a: i32, b: i32) -> i32 {
+    print(label);
+    let r = safe_div(a, b) else {
+        println("error: division by zero");
+        return 0;
+    };
+    print_i32(r);
+    print_newline();
+    return r;
+}
+
+fn describe(v: ?i32) -> []u8 {
+    let x = v else { return "none"; };
+    if x == 42 { return "answer"; }
+    return "a number";
+}
+
+fn main() -> i32 {
+    try_div("10 / 2          = ", 10, 2);
+    try_div("1 / 0           = ", 1, 0);
+
+    let d = double_div(10, 2) else { return 1; };
+    print("double_div(10,2) = ");
+    print_i32(d);
+    print_newline();
+
+    print("describe(42)    = ");
+    println(describe(42));
+    print("describe(7)     = ");
+    println(describe(7));
+    print("describe(none)  = ");
+    println(describe(none));
+    return 0;
+}

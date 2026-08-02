@@ -1,0 +1,27 @@
+use "std/io.cnd";
+
+extern fn pow(x: f64, y: f64) -> f64;
+extern fn floor(x: f64) -> f64;
+extern fn sqrt(x: f64) -> f64;
+
+fn main() -> i32 {
+    let a = 3.5;
+    let b = 2.25;
+
+    print("3.5 + 2.25 = ");
+    print_i32((a + b) as i32);
+    print_newline();
+    print("3.5 * 2.25 = ");
+    print_i32((a * b) as i32);
+    print_newline();
+    print("pow(2, 10)  = ");
+    print_i32(pow(2.0, 10.0) as i32);
+    print_newline();
+    print("floor(2.25) = ");
+    print_i32(floor(b) as i32);
+    print_newline();
+    print("sqrt(144)   = ");
+    print_i32(sqrt(144.0) as i32);
+    print_newline();
+    return 0;
+}

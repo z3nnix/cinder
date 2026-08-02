@@ -1,0 +1,20 @@
+use "std/io.cnd";
+
+extern fn malloc(size: usize) -> *u8;
+extern fn free(p: *u8);
+
+fn use_resource() {
+    let ptr = malloc(1024);
+    defer free(ptr);  
+    
+    unsafe {
+        ptr[0] = 42; 
+        ptr[1] = 43;
+    }
+}
+
+fn main() -> i32 {
+    use_resource();
+    println("Defer worked!");
+    return 0;
+}

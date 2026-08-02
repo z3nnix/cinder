@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+
+      - name: Install toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm binutils qemu-system-x86 xorriso
+
+      - name: Install toolchain (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm xorriso qemu
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+
+      - name: Run unit tests
+        run: |
+          set -e
+          for t in lexer parser sema codegen build extern loader chip8 baremetal; do
+            ruby -I test test/${t}_test.rb
+          done
+
+      - name: Run fuzzer
+        run: ruby tools/fuzz.rb 500 0
+
+      - name: Verify build tool works on example
+        run: |
+          ruby main.rb build examples/hello/main.cnd --emit=bin -o /tmp/hello
+          /tmp/hello

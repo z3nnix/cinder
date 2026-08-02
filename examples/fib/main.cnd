@@ -1,0 +1,20 @@
+use "std/io.cnd";
+
+fn fib(n: u64) -> u64 {
+    if n < 2 {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+fn main() -> i32 {
+    println("Fibonacci numbers:");
+    for i in 0..=15 {
+        print("fib(");
+        print_u64(i as u64);
+        print(") = ");
+        print_u64(fib(i as u64));
+        print_newline();
+    }
+    return 0;
+}

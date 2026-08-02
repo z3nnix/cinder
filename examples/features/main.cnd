@@ -1,0 +1,74 @@
+use "std/io.cnd";
+
+enum Color {
+    Red;
+    Green;
+    Blue;
+}
+
+struct Point {
+    x: i32;
+    y: i32;
+}
+
+fn color_name(c: Color) -> []u8 {
+    switch c {
+        Color.Red => { return "red"; }
+        .Green => { return "green"; }
+        else => { return "blue"; }
+    }
+}
+
+fn classify(v: i32) -> []u8 {
+    switch v {
+        0 => { return "zero"; }
+        1..4 => { return "small"; }
+        else => { return "large"; }
+    }
+}
+
+fn sum(a: []i32) -> i32 {
+    let mut s = 0;
+    for v in a {
+        s += v;
+    }
+    return s;
+}
+
+fn main() -> i32 {
+    let p = Point { x: 3, y: 4 };
+    print("area of 3x4 point = ");
+    print_i32(p.x * p.y);
+    print_newline();
+
+    print("color Red         = ");
+    println(color_name(Color.Red));
+    print("color Green       = ");
+    println(color_name(Color.Green));
+    print("color Blue        = ");
+    println(color_name(Color.Blue));
+
+    print("classify(0)       = ");
+    println(classify(0));
+    print("classify(3)       = ");
+    println(classify(3));
+    print("classify(100)     = ");
+    println(classify(100));
+
+    let arr = [1, 2, 3, 4, 5];
+    print("sum([1..5])       = ");
+    print_i32(sum(arr[..]));
+    print_newline();
+
+    let mut total = 0;
+    for i in 0..5 {
+        total += i;
+    }
+    for i in 0..=5 {
+        total -= i;
+    }
+    print("range arith       = ");
+    print_i32(total);
+    print_newline();
+    return 0;
+}

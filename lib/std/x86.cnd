@@ -1,0 +1,6 @@
+export extern fn outb(port: u16, value: u8);
+export extern fn outw(port: u16, value: u16);
+export extern fn outl(port: u16, value: u32);
+export extern fn inb(port: u16) -> u8;
+export extern fn inw(port: u16) -> u16;
+export extern fn inl(port: u16) -> u32;

@@ -1,0 +1,63 @@
+ 
+
+extern fn write(fd: i32, buf: *u8, count: usize) -> isize;
+export extern fn strlen(s: *u8) -> usize;
+export extern fn printf(fmt: *u8, ...) -> i32;
+export extern fn puts(s: *u8) -> i32;
+export extern fn fflush(stream: *u8) -> i32;
+
+ 
+export fn putchar(c: i32) -> i32 {
+    let b: u8 = c as u8;
+    write(1, &b, 1);
+    return 0;
+}
+
+ 
+export fn print(s: []u8) {
+    write(1, s.ptr, s.len);
+}
+
+ 
+export fn println(s: []u8) {
+    print(s);
+    putchar(10);
+}
+
+ 
+export fn print_cstr(s: *u8) {
+    write(1, s, strlen(s));
+}
+
+export fn print_newline() {
+    putchar(10);
+}
+
+ 
+export fn print_u32(n: u32) {
+    if n >= 10 { print_u32(n / 10); }
+    putchar(48 + (n % 10) as i32);
+}
+
+export fn print_i32(n: i32) {
+    if n < 0 {
+        putchar(45);
+        print_u32((-n) as u32);
+    } else {
+        print_u32(n as u32);
+    }
+}
+
+export fn print_u64(n: u64) {
+    if n >= 10 { print_u64(n / 10); }
+    putchar(48 + (n % 10) as i32);
+}
+
+export fn print_i64(n: i64) {
+    if n < 0 {
+        putchar(45);
+        print_u64((-n) as u64);
+    } else {
+        print_u64(n as u64);
+    }
+}

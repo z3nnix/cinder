@@ -1,1 +1,2 @@
-*.cnd linguist-language=Cinder
+# cuz syntax way simular with rust
+*.cnd linguist-language=rust 

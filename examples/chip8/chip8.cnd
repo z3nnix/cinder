@@ -44,10 +44,10 @@ export fn chip8_new() -> Chip8 {
     ];
     let c = Chip8 {
         mem: malloc(MEM_SIZE as usize),
-        v: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        v: [0; 16],
         i_reg: 0,
         pc: PROG_START as u16,
-        stack: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        stack: [0; 16],
         sp: 0,
         dt: 0,
         st: 0,

@@ -234,7 +234,14 @@ module Cinder
         v = eval_const(node.expr, module_file)
         apply_const_cast(v, node.type, node)
       when ArrayLiteralExpr
-        node.elements.map { |e| eval_const(e, module_file) }
+        if node.repeat
+          count = eval_const(node.repeat_count, module_file)
+          raise ConstError, "array length must be an integer" unless count.is_a?(Integer)
+          raise ConstError, "array length must be non-negative" if count < 0
+          [eval_const(node.elements[0], module_file)] * count
+        else
+          node.elements.map { |e| eval_const(e, module_file) }
+        end
       else
         raise ConstError, "not a constant expression"
       end
@@ -301,8 +308,20 @@ module Cinder
           PrimitiveType.new(node.line, node.col, name: "i32")
         end
       when ArrayLiteralExpr
-        elem = node.elements.empty? ? UNKNOWN : infer_const_type(node.elements.first)
-        ArrayType.new(node.line, node.col, len: node, elem: elem, len_value: node.elements.length)
+        if node.repeat
+          elem = node.elements.empty? ? UNKNOWN : infer_const_type(node.elements.first)
+          len = begin
+            v = eval_const(node.repeat_count, node.module_file)
+            v.is_a?(Integer) ? v : nil
+          rescue ConstError
+            nil
+          end
+          node.repeat_len = len
+          ArrayType.new(node.line, node.col, len: node, elem: elem, len_value: len)
+        else
+          elem = node.elements.empty? ? UNKNOWN : infer_const_type(node.elements.first)
+          ArrayType.new(node.line, node.col, len: node, elem: elem, len_value: node.elements.length)
+        end
       else UNKNOWN
       end
     end
@@ -426,7 +445,11 @@ module Cinder
       when StringLiteral
         return true if equal(string_literal_type(node), expected)
       when ArrayLiteralExpr
-        return true if expected.is_a?(ArrayType) && node.elements.length == expected.len_value
+        if node.repeat
+          return true if expected.is_a?(ArrayType) && node.repeat_len == expected.len_value
+        else
+          return true if expected.is_a?(ArrayType) && node.elements.length == expected.len_value
+        end
       when VarExpr
         if @consts.key?(node.name) && numeric_type?(expected) && numeric_type?(actual)
           return true
@@ -1528,6 +1551,34 @@ module Cinder
     end
 
     def infer_array_literal(node, ctx, expected)
+      if node.repeat
+        len = begin
+          v = eval_const(node.repeat_count, ctx && ctx.module_file)
+          if v.is_a?(Integer)
+            report(node.repeat_count, "array length must be non-negative", ctx && ctx.module_file) if v < 0
+            v
+          else
+            report(node.repeat_count, "array length must be an integer", ctx && ctx.module_file)
+            nil
+          end
+        rescue ConstError => e
+          report(node.repeat_count, "invalid array length: #{e.message}", ctx && ctx.module_file)
+          nil
+        end
+        node.repeat_len = len
+        et = infer_expr(node.elements[0], ctx, expected: expected.is_a?(ArrayType) ? expected.elem : nil)
+        if expected.is_a?(ArrayType)
+          if len != expected.len_value
+            report(node, "array literal has #{len} element(s), expected #{expected.len_value}", ctx && ctx.module_file)
+          end
+          if et && !compatible(et, expected.elem, node.elements[0], ctx)
+            report(node.elements[0], "type mismatch in array literal: expected #{type_name(expected.elem)}, found #{type_name(et)}", ctx && ctx.module_file)
+          end
+          return expected
+        end
+        return ArrayType.new(node.line, node.col, len_value: len, elem: et) if len
+        return UNKNOWN
+      end
       if expected.is_a?(ArrayType)
         if node.elements.length != expected.len_value
           report(node, "array literal has #{node.elements.length} element(s), expected #{expected.len_value}", ctx.module_file)

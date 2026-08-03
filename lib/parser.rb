@@ -759,17 +759,27 @@ module Cinder
       when :lbracket
         advance
         elements = []
+        repeat = false
         unless at?(:rbracket)
-          loop do
-            elements << parse_expression
-            break if accept?(:rbracket)
-            accept?(:comma) or error("expected `,` or `]` in array literal")
-            break if accept?(:rbracket)
+          elements << parse_expression
+          if accept?(:semicolon)
+            repeat = true
+            count = parse_expression
+            expect(:rbracket, "expected `]` in array literal")
+            ArrayLiteralExpr.new(tok.line, tok.col, elements: elements, repeat: true, repeat_count: count)
+          else
+            loop do
+              break if accept?(:rbracket)
+              accept?(:comma) or error("expected `,` or `]` in array literal")
+              break if accept?(:rbracket)
+              elements << parse_expression
+            end
+            ArrayLiteralExpr.new(tok.line, tok.col, elements: elements)
           end
         else
           advance
+          ArrayLiteralExpr.new(tok.line, tok.col, elements: elements)
         end
-        ArrayLiteralExpr.new(tok.line, tok.col, elements: elements)
       when :if
         parse_if_expr
       when :ident

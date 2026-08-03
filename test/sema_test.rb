@@ -460,6 +460,25 @@ class SemaTest < Minitest::Test
     err("fn f() { let a = []; }", /empty array literal/)
   end
 
+  def test_array_repeat_literal
+    ok("fn f() { let a: [4]i32 = [0; 4]; let b: [8]u8 = [0; 8]; let c = [7; 3]; }")
+    ok("fn g() { let z = [0; 0]; }")
+  end
+
+  def test_array_repeat_length_mismatch
+    err("fn f() { let a: [4]i32 = [0; 3]; }", /has 3 element\(s\), expected 4/)
+  end
+
+  def test_array_repeat_type_mismatch
+    err("fn f() { let a: [4]u8 = [300; 4]; }", /does not fit in u8/)
+  end
+
+  def test_array_repeat_bad_count
+    err("fn f() { let a = [0; x]; }", /invalid array length/)
+    err("fn f() { let a = [0; -1]; }", /non-negative/)
+    err("fn f() { let a = [0; 1.5]; }", /must be an integer/)
+  end
+
   def test_void_value_use
     err("fn f() { } fn g() { let x = f(); }", /void value/)
   end

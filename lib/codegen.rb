@@ -956,10 +956,32 @@ module Cinder
       arr_type = expected || node.sema_type
       elem = arr_type.elem
       ptr = alloca("arr", arr_type)
-      node.elements.each_with_index do |el, i|
-        v = gen_as(el, elem)
-        ep = instr("getelementptr #{llvm_type(arr_type)}, ptr #{ptr}, i64 0, i64 #{i}")
-        store_value(elem, v, ep)
+      if node.repeat
+        count = node.repeat_len || 0
+        v = gen_as(node.elements[0], elem)
+        if count > 0
+          n = @bb += 1
+          entry = @cur_block
+          emit("br label %rep_head.#{n}")
+          emit_label("rep_head.#{n}")
+          i = instr("phi i64 [0, %#{entry}], [%rep_next.#{n}, %rep_latch.#{n}]")
+          c = instr("icmp ult i64 #{i}, #{count}")
+          emit_term("br i1 #{c}, label %rep_body.#{n}, label %rep_end.#{n}")
+          emit_label("rep_body.#{n}")
+          ep = instr("getelementptr #{llvm_type(arr_type)}, ptr #{ptr}, i64 0, i64 #{i}")
+          store_value(elem, v, ep)
+          emit_branch_to("rep_latch.#{n}")
+          emit_label("rep_latch.#{n}")
+          instr_named("rep_next.#{n}", "add i64 #{i}, 1")
+          emit_branch_to("rep_head.#{n}")
+          emit_label("rep_end.#{n}")
+        end
+      else
+        node.elements.each_with_index do |el, i|
+          v = gen_as(el, elem)
+          ep = instr("getelementptr #{llvm_type(arr_type)}, ptr #{ptr}, i64 0, i64 #{i}")
+          store_value(elem, v, ep)
+        end
       end
       load_value(arr_type, ptr)
     end

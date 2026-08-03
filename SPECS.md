@@ -592,6 +592,16 @@ A trailing comma is allowed.
 let arr = [1, 2, 3,];
 ```
 
+An array literal can repeat one element a constant number of times.
+
+```cinder
+let zeros: [64]u8 = [0; 64];
+let rows = [1, 2; 3]; // error: the two forms do not mix
+```
+
+The count must be a non-negative constant integer.
+The element expression is evaluated once.
+
 ### 8.7 Calls
 
 A call passes arguments in the declared order.

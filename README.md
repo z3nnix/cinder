@@ -2,8 +2,6 @@
 
 <img align="left" src="meta/logo.png" width="124" alt="Kyronix logo">
 
-<h2 style="margin: 0; border-bottom: none; font-size: 1.5em;">A bit of backstory</h2>
-
 So, for a long time of overthinking I finally realized things that I hate in C and... I wanna try fix them.
 
 ```rust

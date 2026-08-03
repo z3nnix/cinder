@@ -151,6 +151,27 @@ class ParserTest < Minitest::Test
     assert_parse_error("fn f() { let z: u32; }", /must be initialized/)
   end
 
+  def test_array_repeat_literal
+    prog = parse_ok("fn f() { let a = [0; 4]; let b = [1, 2]; let c: [8]u8 = [0; 8]; }")
+    lets = prog.decls[0].body.stmts
+    a = lets[0].init
+    assert_instance_of ArrayLiteralExpr, a
+    assert a.repeat
+    assert_instance_of IntLiteral, a.repeat_count
+    assert_equal 1, a.elements.length
+    b = lets[1].init
+    refute b.repeat
+    assert_equal 2, b.elements.length
+    c = lets[2].init
+    assert c.repeat
+  end
+
+  def test_array_repeat_bad_forms
+    assert_parse_error("fn f() { let a = [1, 2; 3]; }", /expected `,` or `]`/)
+    assert_parse_error("fn f() { let a = [0; 4, 5]; }", /expected `]` in array literal/)
+    assert_parse_error("fn f() { let a = [; 4]; }", /unexpected token/)
+  end
+
   def test_assign
     prog = parse_ok("fn f() { x = 1; counter += 1; *ptr = 42; obj.field = 5; data[i] = 7; }")
     assigns = prog.decls[0].body.stmts

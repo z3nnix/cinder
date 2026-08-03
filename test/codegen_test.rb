@@ -67,8 +67,7 @@ class CodegenTest < Minitest::Test
   end
 
   def assert_ir_includes(ir, *fragments)
-    fragments.each { |f| assert_includes ir, f, "missing fragment #{f.inspect} in IR:\n#{ir}" }
-  end
+    fragments.each { |f| assert_includes ir, f, "missing fragment #{f.inspect} in IR:\n#{ir}" }  end
 
   def test_simple_arith
     ir = gen_ok("fn main() -> i32 { return 2 + 3 * 4; }")
@@ -484,6 +483,33 @@ class CodegenTest < Minitest::Test
           return 1;
       }
     CND
+  end
+
+  def test_array_repeat_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      static TABLE: [4]u8 = [7; 4];
+      fn main() -> i32 {
+          let mut buf: [64]u8 = [0; 64];
+          if buf[0] != 0 { return 1; }
+          if buf[63] != 0 { return 2; }
+          let a: [4]u8 = [9; 4];
+          if a[0] != 9 || a[3] != 9 { return 3; }
+          if TABLE[2] != 7 { return 4; }
+          let mut i: usize = 0;
+          while i < 4 {
+              buf[i] = ('a' as u8) + (i as u8);
+              i += 1;
+          }
+          if buf[0] != 'a' as u8 || buf[3] != 'd' as u8 { return 5; }
+          return 0;
+      }
+    CND
+  end
+
+  def test_array_repeat_ir
+    ir = gen_ok("fn f() { let a: [4]u8 = [0; 4]; }")
+    assert_ir_includes ir, "phi i64 [0, %body], [%rep_next", "icmp ult i64", "getelementptr [4 x i8], ptr"
   end
 
   def test_i128_arithmetic

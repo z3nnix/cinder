@@ -82,7 +82,7 @@ class StdTest < Minitest::Test
 
       fn main() -> i32 {
           let mut a: [8]u8 = [1, 2, 3, 4, 5, 6, 7, 8];
-          let mut b: [8]u8 = [0, 0, 0, 0, 0, 0, 0, 0];
+          let mut b: [8]u8 = [0; 8];
           let ap = a[..].ptr;
           let bp = b[..].ptr;
 
@@ -238,7 +238,7 @@ class StdTest < Minitest::Test
       use "std/io.cnd";
 
       fn main() -> i32 {
-          let mut buf: [40]u8 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+          let mut buf: [40]u8 = [0; 40];
           let bp = buf[..].ptr;
 
           let n1 = fmt_u64(12345, bp, 40);
@@ -433,7 +433,7 @@ class StdTest < Minitest::Test
           print_hex_u8(15);
           putchar(10);
           println_err("err io");
-          let mut buf: [64]u8 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+          let mut buf: [64]u8 = [0; 64];
           let n = read_line(buf[..].ptr, 64);
           if n == 0 { return 1; }
           if !str_equal(buf[0 .. n], "hello world") { return 2; }

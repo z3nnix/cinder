@@ -188,6 +188,9 @@ module Cinder
 
     class ArrayLiteralExpr < Expr
       attr_accessor :elements
+      attr_accessor :repeat
+      attr_accessor :repeat_count
+      attr_accessor :repeat_len
     end
 
     class VarExpr < Expr

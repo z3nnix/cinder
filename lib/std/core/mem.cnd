@@ -1,0 +1,63 @@
+//! Cinder stdlib: memory (core).
+//! Raw memory helpers. The pointer work is unsafe internally.
+
+/// Set n bytes at dst to value.
+export fn mem_fill(dst: *u8, value: u8, n: usize) {
+    unsafe {
+        for i in 0 .. n {
+            dst[i] = value;
+        }
+    }
+}
+
+/// Copy n bytes from src to dst. dst and src must not overlap.
+export fn mem_copy(dst: *u8, src: *u8, n: usize) {
+    unsafe {
+        for i in 0 .. n {
+            dst[i] = src[i];
+        }
+    }
+}
+
+/// Copy n bytes from src to dst. Handles overlapping regions.
+export fn mem_move(dst: *u8, src: *u8, n: usize) {
+    if dst == src { return; }
+    let mut da: u64 = 0;
+    let mut sa: u64 = 0;
+    unsafe {
+        da = dst as u64;
+        sa = src as u64;
+    }
+    if da < sa {
+        unsafe {
+            for i in 0 .. n {
+                dst[i] = src[i];
+            }
+        }
+    } else {
+        let mut i: usize = n;
+        while i > 0 {
+            i -= 1;
+            unsafe { dst[i] = src[i]; }
+        }
+    }
+}
+
+/// Set n bytes at dst to zero.
+export fn mem_zero(dst: *u8, n: usize) {
+    mem_fill(dst, 0, n);
+}
+
+/// Round n up to a multiple of align. align must not be zero.
+export fn mem_align_up(n: usize, align: usize) -> usize {
+    if align == 0 { return n; }
+    let r = n % align;
+    if r == 0 { return n; }
+    return n + align - r;
+}
+
+/// Round n down to a multiple of align. align must not be zero.
+export fn mem_align_down(n: usize, align: usize) -> usize {
+    if align == 0 { return n; }
+    return n / align * align;
+}

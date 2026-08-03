@@ -1087,13 +1087,16 @@ module Cinder
         flag_eq = instr("icmp eq i1 #{fa}, #{fb}")
         va = instr("extractvalue #{llvm_type(t)} #{a}, 1")
         vb = instr("extractvalue #{llvm_type(t)} #{b}, 1")
-        val_eq = instr("icmp eq #{llvm_type(t.inner)} #{va}, #{vb}")
+        if float_type?(t.inner)
+          val = instr("fcmp #{op == "==" ? "oeq" : "une"} #{llvm_type(t.inner)} #{va}, #{vb}")
+        else
+          val = instr("icmp #{op == "==" ? "eq" : "ne"} #{llvm_type(t.inner)} #{va}, #{vb}")
+        end
         if op == "=="
-          instr("and i1 #{flag_eq}, #{val_eq}")
+          instr("and i1 #{flag_eq}, #{val}")
         else
           flag_ne = instr("xor i1 #{flag_eq}, true")
-          val_ne = instr("xor i1 #{val_eq}, true")
-          instr("or i1 #{flag_ne}, #{val_ne}")
+          instr("or i1 #{flag_ne}, #{val}")
         end
       elsif float_type?(t)
         instr("fcmp #{op == "==" ? "oeq" : "one"} #{llvm_type(t)} #{a}, #{b}")

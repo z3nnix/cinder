@@ -489,6 +489,28 @@ module Cinder
       false
     end
 
+    def int_literal_type(node, expected)
+      if node.suffix
+        return PrimitiveType.new(node.line, node.col, name: node.suffix)
+      end
+      v = node.value
+      if expected.is_a?(PrimitiveType) && int_type?(expected)
+        return expected if int_literal_fits?(v, expected)
+      end
+      if v >= -2147483648 && v <= 2147483647
+        PrimitiveType.new(node.line, node.col, name: "i32")
+      elsif v >= -9223372036854775808 && v <= 9223372036854775807
+        PrimitiveType.new(node.line, node.col, name: "i64")
+      elsif v >= 0 && v <= 18446744073709551615
+        PrimitiveType.new(node.line, node.col, name: "u64")
+      elsif v >= -170141183460469231731687303715884105728 &&
+            v <= 170141183460469231731687303715884105727
+        PrimitiveType.new(node.line, node.col, name: "i128")
+      else
+        PrimitiveType.new(node.line, node.col, name: "u128")
+      end
+    end
+
     def literal_int_value(node)
       return node.value if node.is_a?(IntLiteral)
       if node.is_a?(UnaryExpr) && node.op == "-" && node.operand.is_a?(IntLiteral)
@@ -879,7 +901,7 @@ module Cinder
     def infer_expr_unmemoized(node, ctx, expected)
       case node
       when IntLiteral
-        PrimitiveType.new(node.line, node.col, name: node.suffix || "i32")
+        int_literal_type(node, expected)
       when FloatLiteral
         PrimitiveType.new(node.line, node.col, name: node.suffix || "f64")
       when BoolLiteral
@@ -1247,6 +1269,12 @@ module Cinder
 
     def infer_slice(node, ctx)
       t = infer_expr(node.target, ctx)
+      [node.start, node.end_].compact.each do |bound|
+        bt = infer_expr(bound, ctx)
+        unless int_type?(bt) || bt == UNKNOWN
+          report(bound, "slice bound must be an integer, found #{type_name(bt)}", ctx.module_file)
+        end
+      end
       case t
       when ArrayType
         unless ctx.in_unsafe

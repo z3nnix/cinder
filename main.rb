@@ -131,8 +131,9 @@ module Cinder
       when "check"
         check(file, reporter, target: target, dump_tokens: dump_tokens, dump_ast: dump_ast)
       when "build"
-        build(file, reporter, target: target, emit: emit, mode: mode, out: out, verbose: verbose,
+        result = build(file, reporter, target: target, emit: emit, mode: mode, out: out, verbose: verbose,
           linker_script: linker_script, boot: boot, entry: entry)
+        return 1 if result == false
       end
 
       unless reporter.diagnostics.empty?

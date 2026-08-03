@@ -1,0 +1,233 @@
+//! Cinder stdlib: str (core).
+//! Byte string operations on slices of type []u8.
+
+use "std/core/ascii.cnd";
+
+export struct StrSplit {
+    left: []u8;
+    right: []u8;
+}
+
+export fn str_len(s: []u8) -> usize {
+    return s.len;
+}
+
+/// The index of the first occurrence of needle in s, or none.
+export fn str_index_of(s: []u8, needle: []u8) -> ?usize {
+    if needle.len == 0 { return 0; }
+    if needle.len > s.len { return none; }
+    let last = s.len - needle.len;
+    let mut i: usize = 0;
+    while i <= last {
+        let mut j: usize = 0;
+        while j < needle.len {
+            if s[i + j] != needle[j] { break; }
+            j += 1;
+        }
+        if j == needle.len { return i; }
+        i += 1;
+    }
+    return none;
+}
+
+export fn str_contains(s: []u8, needle: []u8) -> bool {
+    return str_index_of(s, needle) != none;
+}
+
+export fn str_starts_with(s: []u8, prefix: []u8) -> bool {
+    if prefix.len > s.len { return false; }
+    let mut i: usize = 0;
+    while i < prefix.len {
+        if s[i] != prefix[i] { return false; }
+        i += 1;
+    }
+    return true;
+}
+
+export fn str_ends_with(s: []u8, suffix: []u8) -> bool {
+    if suffix.len > s.len { return false; }
+    let start = s.len - suffix.len;
+    let mut i: usize = 0;
+    while i < suffix.len {
+        if s[start + i] != suffix[i] { return false; }
+        i += 1;
+    }
+    return true;
+}
+
+/// Skip leading ASCII space characters.
+export fn str_trim_start(s: []u8) -> []u8 {
+    let mut i: usize = 0;
+    while i < s.len && ascii_is_space(s[i]) {
+        i += 1;
+    }
+    return s[i .. s.len];
+}
+
+/// Skip trailing ASCII space characters.
+export fn str_trim_end(s: []u8) -> []u8 {
+    let mut n: usize = s.len;
+    while n > 0 && ascii_is_space(s[n - 1]) {
+        n -= 1;
+    }
+    return s[0 .. n];
+}
+
+export fn str_trim(s: []u8) -> []u8 {
+    return str_trim_start(str_trim_end(s));
+}
+
+/// The slice s[start .. end], or an empty slice on bad bounds.
+export fn str_sub(s: []u8, start: usize, end: usize) -> []u8 {
+    if end > s.len { return s[0 .. 0]; }
+    if start >= end { return s[0 .. 0]; }
+    return s[start .. end];
+}
+
+/// The parts of s around the first occurrence of sep, or none.
+export fn str_split_once(s: []u8, sep: []u8) -> ?StrSplit {
+    let at = str_index_of(s, sep) else { return none; };
+    let end = at + sep.len;
+    return StrSplit { left: s[0 .. at], right: s[end .. s.len] };
+}
+
+/// Lexicographic order: negative when a < b, zero when equal, positive when a > b.
+export fn str_compare(a: []u8, b: []u8) -> i32 {
+    let mut n = a.len;
+    if b.len < n { n = b.len; }
+    let mut i: usize = 0;
+    while i < n {
+        if a[i] != b[i] {
+            if a[i] < b[i] { return -1; }
+            return 1;
+        }
+        i += 1;
+    }
+    if a.len == b.len { return 0; }
+    if a.len < b.len { return -1; }
+    return 1;
+}
+
+export fn str_equal(a: []u8, b: []u8) -> bool {
+    return str_compare(a, b) == 0;
+}
+
+/// The number of non-overlapping occurrences of needle in s.
+export fn str_count(s: []u8, needle: []u8) -> usize {
+    if needle.len == 0 { return 0; }
+    let mut count: usize = 0;
+    let mut i: usize = 0;
+    while i < s.len {
+        let r = str_index_of(s[i .. s.len], needle) else { break; };
+        count += 1;
+        i += r + needle.len;
+    }
+    return count;
+}
+
+/// Parse s as an unsigned integer in the given radix (2..36). Returns none on error.
+export fn str_parse_u64_radix(s: []u8, radix: u32) -> ?u64 {
+    if radix < 2 || radix > 36 { return none; }
+    if s.len == 0 { return none; }
+    let mut value: u64 = 0;
+    let mut i: usize = 0;
+    while i < s.len {
+        let d = ascii_digit_value(s[i]) else { return none; };
+        if (d as u32) >= radix { return none; }
+        let v = value * (radix as u64);
+        if v / (radix as u64) != value { return none; }
+        let nv = v + (d as u64);
+        if nv < v { return none; }
+        value = nv;
+        i += 1;
+    }
+    return value;
+}
+
+/// Parse s as an unsigned decimal integer. Returns none on error.
+export fn str_parse_u64(s: []u8) -> ?u64 {
+    return str_parse_u64_radix(s, 10);
+}
+
+/// Parse s as a signed decimal integer. Returns none on error.
+export fn str_parse_i64(s: []u8) -> ?i64 {
+    let mut i: usize = 0;
+    let mut neg: bool = false;
+    if s.len > 0 && s[0] == '-' as u8 {
+        neg = true;
+        i = 1;
+    }
+    if i >= s.len { return none; }
+    let u = str_parse_u64(s[i .. s.len]) else { return none; };
+    if !neg {
+        if u > 9223372036854775807 { return none; }
+        return u as i64;
+    }
+    if u > 9223372036854775808 { return none; }
+    let n = 0 - u;
+    return n as i64;
+}
+
+/// Parse s as a float. Returns none on error.
+export fn str_parse_f64(s: []u8) -> ?f64 {
+    let mut i: usize = 0;
+    let mut neg: bool = false;
+    if i < s.len && s[i] == '-' as u8 {
+        neg = true;
+        i += 1;
+    } else if i < s.len && s[i] == '+' as u8 {
+        i += 1;
+    }
+    if i >= s.len { return none; }
+
+    let mut value: f64 = 0.0;
+    let mut any: bool = false;
+    while i < s.len && ascii_is_digit(s[i]) {
+        value = value * 10.0 + (s[i] - '0' as u8) as f64;
+        any = true;
+        i += 1;
+    }
+    let mut scale: f64 = 1.0;
+    if i < s.len && s[i] == '.' as u8 {
+        i += 1;
+        while i < s.len && ascii_is_digit(s[i]) {
+            value = value * 10.0 + (s[i] - '0' as u8) as f64;
+            scale = scale * 10.0;
+            any = true;
+            i += 1;
+        }
+    }
+    if !any { return none; }
+    value = value / scale;
+
+    if i < s.len && (s[i] == 'e' as u8 || s[i] == 'E' as u8) {
+        i += 1;
+        let mut eneg: bool = false;
+        if i < s.len && (s[i] == '-' as u8 || s[i] == '+' as u8) {
+            eneg = s[i] == '-' as u8;
+            i += 1;
+        }
+        if i >= s.len { return none; }
+        let mut exp: u32 = 0;
+        while i < s.len && ascii_is_digit(s[i]) {
+            exp = exp * 10 + (s[i] - '0' as u8) as u32;
+            if exp > 308 { exp = 308; }
+            i += 1;
+        }
+        let mut k: u32 = 0;
+        if eneg {
+            while k < exp {
+                value = value / 10.0;
+                k += 1;
+            }
+        } else {
+            while k < exp {
+                value = value * 10.0;
+                k += 1;
+            }
+        }
+    }
+
+    if neg { return 0.0 - value; }
+    return value;
+}

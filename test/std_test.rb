@@ -279,4 +279,85 @@ class StdTest < Minitest::Test
       }
     CND
   end
+
+  def test_vec
+    assert_driver(<<~CND, "vec ok")
+      use "std/vec.cnd";
+      use "std/io.cnd";
+
+      fn main() -> i32 {
+          let mut v: Vec = Vec { data: null, len: 0, cap: 0 };
+          vec_init(&v);
+          if vec_len(&v) != 0 { return 1; }
+          if !vec_push(&v, 65) { return 2; }
+          if !vec_push(&v, 66) { return 3; }
+          if !vec_push(&v, 67) { return 4; }
+          if vec_len(&v) != 3 { return 5; }
+
+          let b0 = vec_get(&v, 0) else { return 6; };
+          if b0 != 65 { return 7; }
+          if vec_get(&v, 3) != none { return 8; }
+          if !vec_set(&v, 1, 98) { return 9; }
+          let b1 = vec_get(&v, 1) else { return 10; };
+          if b1 != 98 { return 11; }
+          if vec_set(&v, 9, 1) { return 12; }
+
+          let p = vec_pop(&v) else { return 13; };
+          if p != 67 { return 14; }
+          if vec_len(&v) != 2 { return 15; }
+
+          let mut w: Vec = vec_from_slice("hello");
+          if vec_as_slice(&w).len != 5 { return 16; }
+          if vec_as_slice(&w)[0] != 'h' as u8 { return 17; }
+          if vec_as_slice(&w)[4] != 'o' as u8 { return 18; }
+
+          let mut x: Vec = Vec { data: null, len: 0, cap: 0 };
+          if !vec_reserve(&x, 16) { return 19; }
+          vec_clear(&x);
+          if vec_len(&x) != 0 { return 20; }
+
+          vec_deinit(&v);
+          vec_deinit(&w);
+          vec_deinit(&x);
+          println("vec ok");
+          return 0;
+      }
+    CND
+  end
+
+  def test_string
+    assert_driver(<<~CND, "string ok")
+      use "std/string.cnd";
+      use "std/core/str.cnd";
+      use "std/io.cnd";
+
+      fn main() -> i32 {
+          let mut s: String = string_new();
+          if !string_empty(&s) { return 1; }
+          if !string_append(&s, "hi") { return 2; }
+          if !string_push_byte(&s, '!' as u8) { return 3; }
+          if string_len(&s) != 3 { return 4; }
+          if !str_equal(string_as_slice(&s), "hi!") { return 5; }
+          if !string_contains(&s, "i!") { return 6; }
+          if string_contains(&s, "zz") { return 7; }
+
+          let mut t: String = string_from("world");
+          if string_equal(&s, &t) { return 8; }
+          if !string_append_str(&s, &t) { return 9; }
+          if !str_equal(string_as_slice(&s), "hi!world") { return 10; }
+          let at = string_find(&s, "wor") else { return 11; };
+          if at != 3 { return 12; }
+
+          string_clear(&s);
+          if !string_empty(&s) { return 13; }
+          if !string_append(&s, "again") { return 14; }
+          if !str_equal(string_as_slice(&s), "again") { return 15; }
+
+          string_deinit(&s);
+          string_deinit(&t);
+          println("string ok");
+          return 0;
+      }
+    CND
+  end
 end

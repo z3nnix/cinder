@@ -1,0 +1,26 @@
+//! Cinder stdlib: allocation (hosted).
+//! Heap memory through the C library malloc family.
+//! Functions return null on out-of-memory.
+
+use "std/core/mem.cnd";
+
+extern fn malloc(size: usize) -> *u8;
+extern fn free(ptr: *u8);
+extern fn realloc(ptr: *u8, size: usize) -> *u8;
+
+/// Allocate n zeroed bytes. Returns null on failure.
+export fn alloc(n: usize) -> *u8 {
+    let p = malloc(n);
+    if p != null { mem_zero(p, n); }
+    return p;
+}
+
+/// Resize a block to n bytes, preserving its contents. Returns null on failure.
+export fn alloc_realloc(p: *u8, n: usize) -> *u8 {
+    return realloc(p, n);
+}
+
+/// Free a block returned by alloc or alloc_realloc. Safe on null.
+export fn dealloc(p: *u8) {
+    if p != null { free(p); }
+}

@@ -1,0 +1,110 @@
+//! Cinder stdlib: vector (hosted).
+//! A growable byte buffer with a capacity.
+
+use "std/core/mem.cnd";
+use "std/alloc.cnd";
+
+/// A growable buffer of bytes. All functions take a pointer to Vec.
+export struct Vec {
+    data: *u8;
+    len: usize;
+    cap: usize;
+}
+
+/// Initialize v to an empty vector.
+export fn vec_init(v: *Vec) {
+    v.data = null;
+    v.len = 0;
+    v.cap = 0;
+}
+
+/// Free the memory owned by v and reset it to empty.
+export fn vec_deinit(v: *Vec) {
+    dealloc(v.data);
+    v.data = null;
+    v.len = 0;
+    v.cap = 0;
+}
+
+/// Ensure v can hold at least n bytes. Returns false on out-of-memory.
+export fn vec_reserve(v: *Vec, n: usize) -> bool {
+    if n <= v.cap { return true; }
+    let d = alloc_realloc(v.data, n);
+    if d == null { return false; }
+    v.data = d;
+    v.cap = n;
+    return true;
+}
+
+/// Append a byte to v. Returns false on out-of-memory.
+export fn vec_push(v: *Vec, byte: u8) -> bool {
+    if v.len >= v.cap {
+        let mut new_cap: usize = 8;
+        if v.cap != 0 { new_cap = v.cap * 2; }
+        if !vec_reserve(v, new_cap) { return false; }
+    }
+    unsafe {
+        v.data[v.len] = byte;
+    }
+    v.len += 1;
+    return true;
+}
+
+/// Remove and return the last byte. Returns none when empty.
+export fn vec_pop(v: *Vec) -> ?u8 {
+    if v.len == 0 { return none; }
+    v.len -= 1;
+    unsafe {
+        return v.data[v.len];
+    }
+}
+
+/// Return the byte at index i. Returns none when out of range.
+export fn vec_get(v: *Vec, i: usize) -> ?u8 {
+    if i >= v.len { return none; }
+    unsafe {
+        return v.data[i];
+    }
+}
+
+/// Set the byte at index i. Returns false when out of range.
+export fn vec_set(v: *Vec, i: usize, byte: u8) -> bool {
+    if i >= v.len { return false; }
+    unsafe {
+        v.data[i] = byte;
+    }
+    return true;
+}
+
+/// Return the number of bytes in v.
+export fn vec_len(v: *Vec) -> usize {
+    return v.len;
+}
+
+/// Return a view of the bytes in v.
+export fn vec_as_slice(v: *Vec) -> []u8 {
+    unsafe {
+        return v.data[0 .. v.len];
+    }
+}
+
+/// Drop all bytes without freeing the buffer.
+export fn vec_clear(v: *Vec) {
+    v.len = 0;
+}
+
+/// Build a vector from a slice. Returns an empty vector on out-of-memory.
+export fn vec_from_slice(s: []u8) -> Vec {
+    let mut v: Vec = Vec { data: null, len: 0, cap: 0 };
+    if s.len > 0 {
+        if vec_reserve(&v, s.len) {
+            unsafe {
+                for i in 0 .. s.len {
+                    v.data[i] = s[i];
+                }
+            }
+            v.len = s.len;
+        }
+    }
+    return v;
+}

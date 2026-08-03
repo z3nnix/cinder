@@ -1,0 +1,83 @@
+//! Cinder stdlib: string (hosted).
+//! A growable, mutable string backed by a Vec.
+
+use "std/core/str.cnd";
+use "std/vec.cnd";
+
+/// A growable string. All functions take a pointer to String.
+export struct String {
+    v: Vec;
+}
+
+/// Return an empty string.
+export fn string_new() -> String {
+    return String { v: Vec { data: null, len: 0, cap: 0 } };
+}
+
+/// Build a string by copying a slice.
+export fn string_from(s: []u8) -> String {
+    return String { v: vec_from_slice(s) };
+}
+
+/// Free the memory owned by s.
+export fn string_deinit(s: *String) {
+    vec_deinit(&s.v);
+}
+
+/// Return the number of bytes in s.
+export fn string_len(s: *String) -> usize {
+    return s.v.len;
+}
+
+/// Return true when s holds no bytes.
+export fn string_empty(s: *String) -> bool {
+    return s.v.len == 0;
+}
+
+/// Append a byte to s. Returns false on out-of-memory.
+export fn string_push_byte(s: *String, b: u8) -> bool {
+    return vec_push(&s.v, b);
+}
+
+/// Append a slice to s. Returns false on out-of-memory.
+export fn string_append(s: *String, t: []u8) -> bool {
+    if t.len == 0 { return true; }
+    if !vec_reserve(&s.v, s.v.len + t.len) { return false; }
+    unsafe {
+        for i in 0 .. t.len {
+            s.v.data[s.v.len + i] = t[i];
+        }
+    }
+    s.v.len += t.len;
+    return true;
+}
+
+/// Append the contents of t to s. Returns false on out-of-memory.
+export fn string_append_str(s: *String, t: *String) -> bool {
+    return string_append(s, vec_as_slice(&t.v));
+}
+
+/// Return a view of the bytes in s.
+export fn string_as_slice(s: *String) -> []u8 {
+    return vec_as_slice(&s.v);
+}
+
+/// Drop all bytes without freeing the buffer.
+export fn string_clear(s: *String) {
+    vec_clear(&s.v);
+}
+
+/// Return true when s and t hold the same bytes.
+export fn string_equal(a: *String, b: *String) -> bool {
+    return str_equal(vec_as_slice(&a.v), vec_as_slice(&b.v));
+}
+
+/// Return the index of the first occurrence of needle in s.
+export fn string_find(s: *String, needle: []u8) -> ?usize {
+    return str_index_of(vec_as_slice(&s.v), needle);
+}
+
+/// Return true when needle occurs in s.
+export fn string_contains(s: *String, needle: []u8) -> bool {
+    return str_contains(vec_as_slice(&s.v), needle);
+}

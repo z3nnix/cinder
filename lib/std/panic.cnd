@@ -1,0 +1,18 @@
+//! Cinder stdlib: panic (hosted).
+//! Report a fatal error on stderr and exit the process.
+
+use "std/io.cnd";
+
+extern fn exit(status: i32) noreturn;
+
+/// Print msg to stderr and exit with status 1.
+export fn panic(msg: []u8) noreturn {
+    println_err(msg);
+    exit(1);
+}
+
+/// Print a null-terminated msg to stderr and exit with status 1.
+export fn panic_cstr(msg: *u8) noreturn {
+    print_cstr_err(msg);
+    exit(1);
+}

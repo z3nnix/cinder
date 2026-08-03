@@ -1,9 +1,13 @@
+//! Cinder stdlib: io (hosted).
+//! Text output to stdout, error output, and helpers for reading stdin.
+
 extern fn write(fd: i32, buf: *u8, count: usize) -> isize;
+extern fn read(fd: i32, buf: *u8, count: usize) -> isize;
 export extern fn strlen(s: *u8) -> usize;
 export extern fn printf(fmt: *u8, ...) -> i32;
 export extern fn puts(s: *u8) -> i32;
 export extern fn fflush(stream: *u8) -> i32;
- 
+
 export fn putchar(c: i32) -> i32 {
     let b: u8 = c as u8;
     write(1, &b, 1);
@@ -13,12 +17,12 @@ export fn putchar(c: i32) -> i32 {
 export fn print(s: []u8) {
     write(1, s.ptr, s.len);
 }
- 
+
 export fn println(s: []u8) {
     print(s);
     putchar(10);
 }
- 
+
 export fn print_cstr(s: *u8) {
     write(1, s, strlen(s));
 }
@@ -26,7 +30,7 @@ export fn print_cstr(s: *u8) {
 export fn print_newline() {
     putchar(10);
 }
- 
+
 export fn print_u32(n: u32) {
     if n >= 10 { print_u32(n / 10); }
     putchar(48 + (n % 10) as i32);
@@ -53,4 +57,83 @@ export fn print_i64(n: i64) {
     } else {
         print_u64(n as u64);
     }
+}
+
+/// Print n as a decimal number.
+export fn print_u128(n: u128) {
+    if n >= 10 { print_u128(n / 10); }
+    putchar(48 + (n % 10) as i32);
+}
+
+/// Print n as a signed decimal number.
+export fn print_i128(n: i128) {
+    if n < 0 {
+        putchar(45);
+        print_u128((0 - n) as u128);
+    } else {
+        print_u128(n as u128);
+    }
+}
+
+/// Print n as lowercase hexadecimal.
+export fn print_hex_u8(n: u8) {
+    if n >= 16 { print_hex_u8(n / 16); }
+    let d = (n % 16) as i32;
+    if d < 10 { putchar(48 + d); } else { putchar(87 + d); }
+}
+
+/// Print n as lowercase hexadecimal.
+export fn print_hex_u32(n: u32) {
+    if n >= 16 { print_hex_u32(n / 16); }
+    let d = (n % 16) as i32;
+    if d < 10 { putchar(48 + d); } else { putchar(87 + d); }
+}
+
+/// Print n as lowercase hexadecimal.
+export fn print_hex_u64(n: u64) {
+    if n >= 16 { print_hex_u64(n / 16); }
+    let d = (n % 16) as i32;
+    if d < 10 { putchar(48 + d); } else { putchar(87 + d); }
+}
+
+/// Write s to standard error.
+export fn print_err(s: []u8) {
+    write(2, s.ptr, s.len);
+}
+
+/// Write s and a newline to standard error.
+export fn println_err(s: []u8) {
+    print_err(s);
+    let nl: u8 = 10;
+    write(2, &nl, 1);
+}
+
+/// Write a null-terminated string to standard error.
+export fn print_cstr_err(s: *u8) {
+    write(2, s, strlen(s));
+}
+
+/// Read a single byte from standard input. Returns none on end of input.
+export fn read_byte() -> ?u8 {
+    let mut b: u8 = 0;
+    if read(0, &b, 1) != 1 { return none; }
+    return b;
+}
+
+/// Read a line from standard input into buf, dropping the trailing newline.
+/// Returns the number of bytes read. NUL-terminates buf when there is room.
+export fn read_line(buf: *u8, cap: usize) -> usize {
+    let mut len: usize = 0;
+    loop {
+        let b = read_byte() else { break; };
+        if b == '\n' as u8 { break; }
+        if b == '\r' as u8 { continue; }
+        if len >= cap { break; }
+        unsafe { buf[len] = b; }
+        len += 1;
+    }
+    if len < cap {
+        unsafe { buf[len] = 0; }
+    }
+    return len;
 }

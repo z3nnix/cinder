@@ -1,0 +1,123 @@
+//! Cinder stdlib: math (core).
+//! Integer and float helpers. No libc calls.
+
+/// The absolute value of n.
+export fn math_abs(n: i64) -> i64 {
+    if n < 0 { return 0 - n; }
+    return n;
+}
+
+/// The distance between a and b as an unsigned value.
+export fn math_abs_diff(a: i64, b: i64) -> u64 {
+    if a >= b { return (a - b) as u64; }
+    return (b - a) as u64;
+}
+
+/// The smaller of a and b.
+export fn math_min(a: i64, b: i64) -> i64 {
+    if a < b { return a; }
+    return b;
+}
+
+/// The larger of a and b.
+export fn math_max(a: i64, b: i64) -> i64 {
+    if a > b { return a; }
+    return b;
+}
+
+/// Clamp n to the range [lo, hi].
+export fn math_clamp(n: i64, lo: i64, hi: i64) -> i64 {
+    if n < lo { return lo; }
+    if n > hi { return hi; }
+    return n;
+}
+
+/// The smaller of a and b.
+export fn math_min_u(a: u64, b: u64) -> u64 {
+    if a < b { return a; }
+    return b;
+}
+
+/// The larger of a and b.
+export fn math_max_u(a: u64, b: u64) -> u64 {
+    if a > b { return a; }
+    return b;
+}
+
+/// Clamp n to the range [lo, hi].
+export fn math_clamp_u(n: u64, lo: u64, hi: u64) -> u64 {
+    if n < lo { return lo; }
+    if n > hi { return hi; }
+    return n;
+}
+
+/// True when n is a power of two. Zero is not a power of two.
+export fn math_is_pow2(n: u64) -> bool {
+    return n != 0 && (n & (n - 1)) == 0;
+}
+
+/// The floor of the binary logarithm of n, or 0 when n is zero.
+export fn math_log2(n: u64) -> u64 {
+    let mut r: u64 = 0;
+    let mut v = n;
+    while v >= 2 {
+        v = v / 2;
+        r += 1;
+    }
+    return r;
+}
+
+/// n raised to the power e.
+export fn math_pow(n: u64, e: u32) -> u64 {
+    let mut result: u64 = 1;
+    let mut base = n;
+    let mut exp = e as u64;
+    while exp > 0 {
+        if (exp & 1) == 1 { result = result * base; }
+        base = base * base;
+        exp = exp / 2;
+    }
+    return result;
+}
+
+/// The greatest common divisor of a and b.
+export fn math_gcd(a: u64, b: u64) -> u64 {
+    let mut x = a;
+    let mut y = b;
+    while y != 0 {
+        let t = x % y;
+        x = y;
+        y = t;
+    }
+    return x;
+}
+
+/// The absolute value of n.
+export fn math_fabs(n: f64) -> f64 {
+    if n < 0.0 { return 0.0 - n; }
+    return n;
+}
+
+/// The largest integer not greater than n. NaN maps to 0.0.
+export fn math_floor(n: f64) -> f64 {
+    let mut f = (n as i64) as f64;
+    if n < f { f = f - 1.0; }
+    return f;
+}
+
+/// The smallest integer not less than n.
+export fn math_ceil(n: f64) -> f64 {
+    return 0.0 - math_floor(0.0 - n);
+}
+
+/// The smaller of a and b.
+export fn math_fmin(a: f64, b: f64) -> f64 {
+    if a < b { return a; }
+    return b;
+}
+
+/// The larger of a and b.
+export fn math_fmax(a: f64, b: f64) -> f64 {
+    if a > b { return a; }
+    return b;
+}

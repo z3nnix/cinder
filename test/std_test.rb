@@ -27,6 +27,19 @@ class StdTest < Minitest::Test
     assert_includes out, marker
   end
 
+  def build_run_stdin(src, input)
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    Dir.mktmpdir do |dir|
+      file = File.join(dir, "main.cnd")
+      File.write(file, src)
+      bin = File.join(dir, "prog")
+      _out, err, st = Open3.capture3(RbConfig.ruby, MAIN, "build", file, "--emit=bin", "-o", bin)
+      assert_equal 0, st.exitstatus, "build failed:\n#{err}"
+      out, err_out, run_st = Open3.capture3(bin, stdin_data: input)
+      [out, err_out, run_st.exitstatus]
+    end
+  end
+
   def test_ascii
     assert_driver(<<~CND, "ascii ok")
       use "std/core/ascii.cnd";
@@ -359,5 +372,96 @@ class StdTest < Minitest::Test
           return 0;
       }
     CND
+  end
+
+  def test_math
+    assert_driver(<<~CND, "math ok")
+      use "std/core/math.cnd";
+      use "std/io.cnd";
+
+      fn main() -> i32 {
+          if math_abs(-7) != 7 { return 1; }
+          if math_abs(7) != 7 { return 2; }
+          if math_abs_diff(-3, 5) != 8 { return 3; }
+          if math_abs_diff(5, 2) != 3 { return 4; }
+          if math_min(3, 5) != 3 { return 5; }
+          if math_max(3, 5) != 5 { return 6; }
+          if math_clamp(1, 2, 4) != 2 { return 7; }
+          if math_clamp(9, 2, 4) != 4 { return 8; }
+          if math_clamp(3, 2, 4) != 3 { return 9; }
+          if math_min_u(3, 5) != 3 { return 10; }
+          if math_max_u(3, 5) != 5 { return 11; }
+          if math_clamp_u(1, 2, 4) != 2 { return 12; }
+          if !math_is_pow2(1024) { return 13; }
+          if math_is_pow2(0) { return 14; }
+          if math_is_pow2(3) { return 15; }
+          if math_log2(1024) != 10 { return 16; }
+          if math_log2(1) != 0 { return 17; }
+          if math_pow(2, 10) != 1024 { return 18; }
+          if math_pow(3, 3) != 27 { return 19; }
+          if math_pow(5, 0) != 1 { return 20; }
+          if math_gcd(12, 18) != 6 { return 21; }
+          if math_gcd(7, 13) != 1 { return 22; }
+          if math_fabs(-2.5) != 2.5 { return 23; }
+          if math_floor(3.7) != 3.0 { return 24; }
+          if math_floor(-3.2) != -4.0 { return 25; }
+          if math_ceil(3.2) != 4.0 { return 26; }
+          if math_ceil(-3.7) != -3.0 { return 27; }
+          if math_fmin(1.5, 2.5) != 1.5 { return 28; }
+          if math_fmax(1.5, 2.5) != 2.5 { return 29; }
+          println("math ok");
+          return 0;
+      }
+    CND
+  end
+
+  def test_io
+    out, err_out, code = build_run_stdin(<<~CND, "hello world\n")
+      use "std/io.cnd";
+      use "std/core/str.cnd";
+
+      fn main() -> i32 {
+          println("io a");
+          print_u128(340282366920938463463374607431768211455);
+          putchar(10);
+          print_i128(-42);
+          putchar(10);
+          print_hex_u64(0xdeadbeef);
+          putchar(10);
+          print_hex_u32(0xff);
+          putchar(10);
+          print_hex_u8(15);
+          putchar(10);
+          println_err("err io");
+          let mut buf: [64]u8 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+          let n = read_line(buf[..].ptr, 64);
+          if n == 0 { return 1; }
+          if !str_equal(buf[0 .. n], "hello world") { return 2; }
+          println("io ok");
+          return 0;
+      }
+    CND
+    assert_equal 0, code, "io driver failed with exit #{code}:\n#{out}"
+    assert_includes out, "io a"
+    assert_includes out, "340282366920938463463374607431768211455"
+    assert_includes out, "-42"
+    assert_includes out, "deadbeef"
+    assert_includes out, "ff"
+    assert_includes out, "f"
+    assert_includes out, "io ok"
+    assert_includes err_out, "err io"
+  end
+
+  def test_panic
+    out, err_out, code = build_run_stdin(<<~CND, "")
+      use "std/panic.cnd";
+
+      fn main() -> i32 {
+          panic("boom");
+          return 0;
+      }
+    CND
+    assert_equal 1, code, "panic driver exited with #{code}:\n#{out}\n#{err_out}"
+    assert_includes err_out, "boom"
   end
 end

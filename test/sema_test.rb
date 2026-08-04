@@ -743,4 +743,151 @@ class SemaTest < Minitest::Test
       fn main() { let a = ArmOnly { x: 1 }; }
     CND
   end
+
+  # ---------- function pointers ----------
+
+  def test_fn_ptr_var_assign_and_call
+    ok("fn add(a: i32, b: i32) -> i32 { return a + b; }\nfn main() { let f: fn(i32, i32) -> i32 = add; let r = f(1, 2); }")
+  end
+
+  def test_fn_ptr_addr_of
+    ok("fn add(a: i32, b: i32) -> i32 { return a + b; }\nfn main() { let f: fn(i32, i32) -> i32 = &add; let r = f(1, 2); }")
+  end
+
+  def test_fn_ptr_param_indirect_call
+    ok("fn apply(f: fn(i32) -> i32, x: i32) -> i32 { return f(x); }\nfn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let r = apply(dbl, 21); }")
+  end
+
+  def test_fn_ptr_void_return
+    ok("fn greet() { }\nfn run(cb: fn()) { cb(); }\nfn main() { run(greet); }")
+  end
+
+  def test_fn_ptr_struct_field
+    ok(<<~CND)
+      struct H { id: i32; cb: fn(i32) -> i32; }
+      fn dbl(x: i32) -> i32 { return x * 2; }
+      fn invoke(h: struct H, v: i32) -> i32 { return h.cb(v); }
+      fn main() { let h = H { id: 1, cb: dbl }; let r = invoke(h, 3); }
+    CND
+  end
+
+  def test_fn_ptr_extern_param
+    ok("extern fn atexit(cb: fn() -> void) -> i32;\nfn bye() { }\nfn main() { let r = atexit(bye); }")
+  end
+
+  def test_fn_ptr_null
+    ok("fn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let f: fn(i32) -> i32 = null; if f != null { } }")
+  end
+
+  def test_fn_ptr_arg_type_mismatch
+    err("fn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let f: fn(i32) -> i32 = dbl; f(c\"s\"); }", /type mismatch for parameter/)
+  end
+
+  def test_fn_ptr_arity_mismatch
+    err("fn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let f: fn(i32) -> i32 = dbl; f(1, 2); }", /expects 1 argument/)
+  end
+
+  def test_fn_ptr_struct_mismatch
+    err("fn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let f: fn(i64) -> i32 = dbl; }", /expected fn\(i64\)/)
+  end
+
+  def test_cannot_compare_fn_ptrs_to_int
+    err("fn dbl(x: i32) -> i32 { return x * 2; }\nfn main() { let f: fn(i32) -> i32 = dbl; if f == 0 { } }", /cannot compare/)
+  end
+
+  # ---------- void pointers ----------
+
+  def test_void_ptr_coerce_from_typed
+    ok("extern fn memset(dst: *void, c: i32, n: usize) -> *void;\nfn main() { let mut x: u64 = 1; memset(&x, 0, 8); }")
+  end
+
+  def test_void_ptr_cast_to_typed_requires_unsafe
+    err("extern fn malloc(n: usize) -> *void;\nfn main() { let p: *void = malloc(8); let q: *i32 = p as *i32; }", /requires an unsafe block/)
+  end
+
+  def test_void_ptr_cast_to_typed_in_unsafe
+    ok("extern fn malloc(n: usize) -> *void;\nfn main() { let p: *void = malloc(8); unsafe { let q: *i32 = p as *i32; } }")
+  end
+
+  def test_void_ptr_typecast_to_fn_unsupported
+    err("extern fn malloc(n: usize) -> *void;\nfn main() { let p: *void = malloc(8); unsafe { let q: fn() -> i32 = p as fn() -> i32; } }", /unsupported cast/)
+  end
+
+  def test_deref_void_ptr_rejected
+    err("fn main() { let p: *void = null; unsafe { let v = *p; } }", /cannot dereference a void pointer/)
+  end
+
+  def test_index_void_ptr_rejected
+    err("fn main() { let p: *void = null; unsafe { let v = p[0]; } }", /cannot index a void pointer/)
+  end
+
+  def test_slice_void_ptr_rejected
+    err("fn main() { let p: *void = null; unsafe { let s = p[0..2]; } }", /cannot slice a void pointer/)
+  end
+
+  def test_null_assignable_to_void_ptr
+    ok("fn main() { let p: *void = null; if p != null { } }")
+  end
+
+  # ---------- sizeof / alignof / offsetof ----------
+
+  def test_sizeof_primitive
+    ok("fn main() { let s: usize = sizeof(i32); }")
+  end
+
+  def test_sizeof_struct
+    ok(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      fn main() { let s: usize = sizeof(struct Pair); }
+    CND
+  end
+
+  def test_offsetof_struct_field
+    ok(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      fn main() { let o: usize = offsetof(struct Pair, b); }
+    CND
+  end
+
+  def test_alignof_struct
+    ok(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      fn main() { let a: usize = alignof(struct Pair); }
+    CND
+  end
+
+  def test_offsetof_unknown_field_error
+    err("struct Pair { a: i32; b: u8; }\nfn main() { let o: usize = offsetof(struct Pair, z); }", /no field `z`/)
+  end
+
+  def test_offsetof_non_struct_error
+    err("fn main() { let o: usize = offsetof(i32, z); }", /requires a struct type/)
+  end
+
+  def test_static_assert_ok
+    ok(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      static_assert(sizeof(i32) == 4);
+      static_assert(sizeof(struct Pair) == 8);
+      static_assert(offsetof(struct Pair, b) == 4);
+      static_assert(alignof(i64) == 8);
+      fn main() { }
+    CND
+  end
+
+  def test_static_assert_failure
+    err("struct Pair { a: i32; b: u8; }\nstatic_assert(sizeof(struct Pair) == 4);\nfn main() { }", /static_assert failed/)
+  end
+
+  def test_static_assert_non_const_error
+    err("fn main() { }\nstatic_assert(main);", /requires a constant expression/)
+  end
+
+  def test_static_assert_in_function_body
+    ok("fn main() { static_assert(sizeof(i32) == 4); }")
+  end
+
+  def test_sizeof_in_const
+    ok("struct Pair { a: i32; b: u8; }\nconst SZ: usize = sizeof(struct Pair);\nfn main() { let s = SZ; }")
+  end
 end

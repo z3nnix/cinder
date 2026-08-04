@@ -179,4 +179,68 @@ class ExternTest < Minitest::Test
     assert_equal "bye", out
     assert_equal 3, code
   end
+
+  # ---------- C interop: function pointers and void* ----------
+
+  def test_run_c_callback_into_cinder
+    out, code = run_stdout(<<~CND)
+      use "std/io.cnd";
+      extern fn atexit(cb: fn() -> void) -> i32;
+      fn goodbye() {
+          println("bye");
+      }
+      fn main() -> i32 {
+          let ok: i32 = atexit(goodbye);
+          if ok != 0 { return 1; }
+          println("hello");
+          return 0;
+      }
+    CND
+    assert_equal "hello\nbye\n", out
+    assert_equal 0, code
+  end
+
+  def test_run_void_ptr_coerce
+    out, code = run_stdout(<<~CND)
+      extern fn memset(dst: *void, c: i32, n: usize) -> *void;
+      extern fn malloc(n: usize) -> *void;
+      fn main() -> i32 {
+          let mut x: u64 = 0xdeadbeef;
+          memset(&x, 0, 8);
+          if x != 0 { return 1; }
+          let p: *void = malloc(16);
+          if p == null { return 2; }
+          unsafe {
+              let q: *i32 = p as *i32;
+              q[0] = 42;
+              if q[0] != 42 { return 3; }
+          }
+          return 0;
+      }
+    CND
+    assert_equal 0, code
+  end
+
+  def test_run_c_qsort_with_cinder_comparator
+    out, code = run_stdout(<<~CND)
+      extern fn qsort(base: *void, nmemb: usize, size: usize, compar: fn(*void, *void) -> i32);
+      unsafe fn cmp(a: *void, b: *void) -> i32 {
+          let x: *i32 = a as *i32;
+          let y: *i32 = b as *i32;
+          return x[0] - y[0];
+      }
+      fn main() -> i32 {
+          let mut arr: [4]i32 = [4, 2, 3, 1];
+          unsafe {
+              qsort(&arr, 4, 4, cmp);
+          }
+          if arr[0] != 1 { return 1; }
+          if arr[1] != 2 { return 2; }
+          if arr[2] != 3 { return 3; }
+          if arr[3] != 4 { return 4; }
+          return 0;
+      }
+    CND
+    assert_equal 0, code
+  end
 end

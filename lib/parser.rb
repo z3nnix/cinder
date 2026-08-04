@@ -68,6 +68,8 @@ module Cinder
             decls << parse_top_decl(exported: true)
           when "struct"
             decls << parse_struct(exported: false)
+          when "static_assert"
+            decls << parse_static_assert
           else
             error("unexpected token #{tok.value.inspect} at top level")
           end
@@ -133,6 +135,16 @@ module Cinder
     end
 
     # top-level decls
+
+    def parse_static_assert
+      tok = expect(:ident, "expected `static_assert`")
+      error("expected `static_assert`") unless tok.value == "static_assert"
+      expect(:lparen, "expected `(` after `static_assert`")
+      cond = with_no_struct_init { parse_expression }
+      expect(:rparen, "expected `)`")
+      expect_semicolon
+      StaticAssertStmt.new(tok.line, tok.col, cond: cond)
+    end
 
     def parse_top_decl(exported:, target: nil)
       case peek.type
@@ -374,9 +386,27 @@ module Cinder
       when :bang
         advance
         ErrorType.new(tok.line, tok.col, inner: parse_type)
+      when :fn
+        advance
+        params = []
+        expect(:lparen, "expected `(` after `fn` type")
+        unless at?(:rparen)
+          loop do
+            params << parse_type
+            break if accept?(:rparen)
+            accept?(:comma) or error("expected `,` or `)` in function type")
+            break if accept?(:rparen)
+          end
+        else
+          advance
+        end
+        ret = accept?(:arrow) ? parse_type : nil
+        FunctionType.new(tok.line, tok.col, params: params, ret: ret)
       when :ident
         advance
-        if PRIMITIVES.include?(tok.value)
+        if tok.value == "struct"
+          NamedType.new(tok.line, tok.col, name: expect_ident)
+        elsif PRIMITIVES.include?(tok.value)
           PrimitiveType.new(tok.line, tok.col, name: tok.value)
         else
           NamedType.new(tok.line, tok.col, name: tok.value)
@@ -384,6 +414,13 @@ module Cinder
       else
         error("expected type, found `#{tok.type}`")
       end
+    end
+
+    def parse_type_parens
+      expect(:lparen, "expected `(`")
+      t = parse_type
+      expect(:rparen, "expected `)`")
+      t
     end
 
     # statements
@@ -437,6 +474,12 @@ module Cinder
         UnsafeBlock.new(tok.line, tok.col, block: block)
       when :lbrace
         parse_block
+      when :ident
+        if tok.value == "static_assert"
+          parse_static_assert
+        else
+          parse_expr_or_assign
+        end
       else
         parse_expr_or_assign
       end
@@ -802,6 +845,17 @@ module Cinder
           expect(:rparen, "expected `)`")
           return AsmExpr.new(tok.line, tok.col, asm_string: str)
         end
+      when "sizeof"
+        return SizeofExpr.new(tok.line, tok.col, type_node: parse_type_parens)
+      when "alignof"
+        return AlignofExpr.new(tok.line, tok.col, type_node: parse_type_parens)
+      when "offsetof"
+        expect(:lparen, "expected `(` after `offsetof`")
+        type_node = parse_type
+        expect(:comma, "expected `,` in `offsetof`")
+        field = expect_ident
+        expect(:rparen, "expected `)`")
+        return OffsetofExpr.new(tok.line, tok.col, type_node: type_node, field: field)
       end
 
       if at?(:lbrace) && !@no_struct_init

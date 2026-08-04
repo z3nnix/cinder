@@ -403,4 +403,83 @@ class ParserTest < Minitest::Test
     assert_equal 1, stmts.length
     assert_instance_of ExprStmt, stmts[0]
   end
+
+  # ---------- function pointers ----------
+
+  def test_fn_type_annotation
+    prog = parse_ok("fn apply(f: fn(i32, i32) -> i32) -> i32 { return f(1, 2); }")
+    param = prog.decls[0].params[0]
+    assert_instance_of FunctionType, param.type
+    assert_equal 2, param.type.params.length
+    assert_equal "i32", param.type.ret.name
+  end
+
+  def test_fn_type_void_return
+    prog = parse_ok("fn run(cb: fn()) { cb(); }")
+    param = prog.decls[0].params[0]
+    assert_instance_of FunctionType, param.type
+    assert_nil param.type.ret
+  end
+
+  def test_fn_type_nested_param
+    prog = parse_ok("fn h(g: fn(fn() -> i32) -> i32) -> i32 { return 0; }")
+    param = prog.decls[0].params[0].type
+    assert_instance_of FunctionType, param
+    assert_instance_of FunctionType, param.params[0]
+  end
+
+  def test_fn_ptr_extern_param
+    prog = parse_ok("extern fn atexit(cb: fn() -> void) -> i32;")
+    t = prog.decls[0].params[0].type
+    assert_instance_of FunctionType, t
+    assert_equal 0, t.params.length
+    assert_equal "void", t.ret.name
+  end
+
+  # ---------- sizeof / alignof / offsetof ----------
+
+  def test_sizeof_expr
+    prog = parse_ok("fn main() { let s: usize = sizeof(i32); }")
+    init = prog.decls[0].body.stmts[0].init
+    assert_instance_of SizeofExpr, init
+  end
+
+  def test_sizeof_struct_type
+    prog = parse_ok("struct P { a: i32; } fn main() { let s: usize = sizeof(struct P); }")
+    init = prog.decls[1].body.stmts[0].init
+    assert_instance_of SizeofExpr, init
+    assert_equal "P", init.type_node.name
+  end
+
+  def test_alignof_expr
+    prog = parse_ok("fn main() { let s: usize = alignof(i64); }")
+    init = prog.decls[0].body.stmts[0].init
+    assert_instance_of AlignofExpr, init
+    assert_equal "i64", init.type_node.name
+  end
+
+  def test_offsetof_expr
+    prog = parse_ok("struct P { a: i32; b: u8; } fn main() { let o: usize = offsetof(struct P, b); }")
+    init = prog.decls[1].body.stmts[0].init
+    assert_instance_of OffsetofExpr, init
+    assert_equal "b", init.field
+  end
+
+  # ---------- static_assert ----------
+
+  def test_static_assert_top_level
+    prog = parse_ok("static_assert(sizeof(i32) == 4);\nfn main() { }")
+    assert_instance_of StaticAssertStmt, prog.decls[0]
+  end
+
+  def test_static_assert_in_body
+    prog = parse_ok("fn main() { static_assert(1 == 1); }")
+    stmt = prog.decls[0].body.stmts[0]
+    assert_instance_of StaticAssertStmt, stmt
+    assert_instance_of BinaryExpr, stmt.cond
+  end
+
+  def test_static_assert_missing_paren
+    assert_parse_error("static_assert 1 == 1;\nfn main() { }", /expected `\(`/)
+  end
 end

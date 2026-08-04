@@ -190,6 +190,8 @@ module Cinder
         "{ ptr, i64 }"
       when PointerType
         "ptr"
+      when FunctionType
+        "ptr"
       when OptionalType, ErrorType
         "{ i1, #{llvm_type(t.inner)} }"
       else
@@ -528,6 +530,8 @@ module Cinder
         pop_scope
       when AsmStmt
         emit("call void asm sideeffect \"#{asm_string(node.asm_string)}\", \"\"()")
+      when StaticAssertStmt
+        # compile-time only, no runtime code
       when ExprStmt
         gen_expr(node.expr)
       end
@@ -800,6 +804,8 @@ module Cinder
         gen_maybe_else(node)
       when ErrorUnwrapExpr
         gen_unwrap(node)
+      when SizeofExpr, AlignofExpr, OffsetofExpr
+        int_const(node.value, "usize")
       when AsmExpr
         emit("call void asm sideeffect \"#{asm_string(node.asm_string)}\", \"\"()")
         "void"
@@ -828,7 +834,7 @@ module Cinder
           return pair_const(expected)
         end
       when NullLiteral
-        if pointer_type?(expected)
+        if pointer_type?(expected) || expected.is_a?(FunctionType)
           return "null"
         end
       when StringLiteral
@@ -935,6 +941,10 @@ module Cinder
       if @consts.key?(name)
         ct = @const_types[name]
         return scalar_constant(@const_values[name], ct)
+      end
+      if (fn = @fns[name])
+        return "void" if port_io?(fn)
+        return "@#{fn_name(fn)}"
       end
       "void"
     end
@@ -1204,9 +1214,16 @@ module Cinder
 
     def gen_call(node)
       callee = node.callee
-      fn = @fns[callee.name]
+      if callee.is_a?(VarExpr) && (fn = @fns[callee.name])
+        fixed = fn.params.zip(node.args).map { |p, a| "#{llvm_type(p.type)} #{gen_as(a, p.type)}" }
+        return gen_port_io(fn, fixed) if port_io?(fn)
+        return gen_direct_call(node, fn)
+      end
+      gen_indirect_call(node)
+    end
+
+    def gen_direct_call(node, fn)
       fixed = fn.params.zip(node.args).map { |p, a| "#{llvm_type(p.type)} #{gen_as(a, p.type)}" }
-      return gen_port_io(fn, fixed) if port_io?(fn)
       variadic = node.args[fn.params.length..] || []
       args = fixed + variadic.map do |a|
         v = gen_expr(a)
@@ -1219,6 +1236,20 @@ module Cinder
         "void"
       else
         instr("call #{ftype} @#{fn_name(fn)}(#{args.join(', ')})")
+      end
+    end
+
+    def gen_indirect_call(node)
+      ft = node.callee.sema_type.is_a?(FunctionType) ? node.callee.sema_type : node.sema_type.is_a?(FunctionType) ? node.sema_type : nil
+      raise "internal: indirect call without a function type" if ft.nil?
+      fp = gen_as(node.callee, ft)
+      args = ft.params.zip(node.args).map { |p, a| "#{llvm_type(p)} #{gen_as(a, p)}" }
+      ftype = "#{llvm_type(ft.ret)} (#{ft.params.map { |p| llvm_type(p) }.join(', ')})"
+      if ft.ret.nil?
+        emit("call #{ftype} #{fp}(#{args.join(', ')})")
+        "void"
+      else
+        instr("call #{ftype} #{fp}(#{args.join(', ')})")
       end
     end
 
@@ -1424,6 +1455,9 @@ module Cinder
           loc[:ptr]
         elsif @statics.key?(node.name)
           "@#{static_name(node.name)}"
+        elsif (fn = @fns[node.name])
+          return nil if port_io?(fn)
+          "@#{fn_name(fn)}"
         else
           nil
         end

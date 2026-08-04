@@ -90,6 +90,10 @@ module Cinder
       attr_accessor :name, :resolved
     end
 
+    class FunctionType < TypeNode
+      attr_accessor :params, :ret
+    end
+
     # Statements
 
     class Stmt < Node; end
@@ -143,6 +147,10 @@ module Cinder
 
     class DeferStmt < Stmt
       attr_accessor :stmt
+    end
+
+    class StaticAssertStmt < Stmt
+      attr_accessor :cond
     end
 
     class UnsafeBlock < Stmt
@@ -257,6 +265,18 @@ module Cinder
       attr_accessor :asm_string
     end
 
+    class SizeofExpr < Expr
+      attr_accessor :type_node, :value
+    end
+
+    class AlignofExpr < Expr
+      attr_accessor :type_node, :value
+    end
+
+    class OffsetofExpr < Expr
+      attr_accessor :type_node, :field, :value
+    end
+
     # Dumper
 
     class Dumper
@@ -279,7 +299,7 @@ module Cinder
             v = n.instance_variable_get(iv)
             key = iv.to_s.delete_prefix("@")
             next if key == "line" || key == "col"
-            next if v.nil? && %w[module_file section inline naked target volatile noreturn].include?(key)
+            next if v.nil? && %w[module_file section inline naked target volatile noreturn value].include?(key)
             "#{key}=#{dump_node(v)}"
           end
           "(#{n.class.name.split('::').last} #{fields.join(' ')})"

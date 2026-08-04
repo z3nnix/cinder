@@ -525,4 +525,89 @@ class CodegenTest < Minitest::Test
       }
     CND
   end
+
+  # ---------- function pointers ----------
+
+  def test_fn_ptr_var_call_ir
+    ir = gen_ok("fn add(a: i32, b: i32) -> i32 { return a + b; }\nfn main() -> i32 { let f: fn(i32, i32) -> i32 = add; return f(1, 2); }")
+    assert_ir_includes ir,
+      "store ptr @cinder_add, ptr %p.f.1",
+      "call i32 (i32, i32) %t.1(i32 1, i32 2)"
+  end
+
+  def test_fn_ptr_extern_callback_ir
+    ir = gen_ok("extern fn atexit(cb: fn() -> void) -> i32;\nfn bye() { }\nfn main() -> i32 { return atexit(bye); }")
+    assert_ir_includes ir,
+      "declare i32 @atexit(ptr)",
+      "call i32 (ptr) @atexit(ptr @cinder_bye)"
+  end
+
+  def test_fn_ptr_struct_field_ir
+    ir = gen_ok(<<~CND)
+      struct H { id: i32; cb: fn(i32) -> i32; }
+      fn dbl(x: i32) -> i32 { return x * 2; }
+      fn invoke(h: struct H, v: i32) -> i32 { return h.cb(v); }
+      fn main() -> i32 { let h = H { id: 1, cb: dbl }; return invoke(h, 3); }
+    CND
+    assert_ir_includes ir,
+      "%struct.H = type { i32, ptr }",
+      "call i32 (i32) %t.2(i32 %t.3)"
+  end
+
+  def test_fn_ptr_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      fn apply(f: fn(i32) -> i32, x: i32) -> i32 { return f(x); }
+      fn dbl(x: i32) -> i32 { return x * 2; }
+      fn triple(x: i32) -> i32 { return x * 3; }
+      fn main() -> i32 {
+          let f: fn(i32) -> i32 = dbl;
+          if f(21) != 42 { return 1; }
+          if apply(triple, 14) != 42 { return 2; }
+          let g: fn(i32) -> i32 = &dbl;
+          if g(4) != 8 { return 3; }
+          return 0;
+      }
+    CND
+  end
+
+  # ---------- sizeof / alignof / offsetof ----------
+
+  def test_sizeof_constants_ir
+    ir = gen_ok(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      fn main() -> i32 {
+          let sz: usize = sizeof(struct Pair);
+          let al: usize = alignof(struct Pair);
+          let off: usize = offsetof(struct Pair, b);
+          return (sz + al + off) as i32;
+      }
+    CND
+    assert_ir_includes ir, "i64 8", "i64 4", "i64 4"
+  end
+
+  def test_static_assert_emits_no_code
+    ir = gen_ok("static_assert(sizeof(i32) == 4);\nfn main() -> i32 { return 0; }")
+    assert_includes ir, "define i32 @cinder_main()"
+  end
+
+  def test_sizeof_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      struct Pair { a: i32; b: u8; }
+      fn main() -> i32 {
+          if sizeof(struct Pair) != 8 { return 1; }
+          if alignof(struct Pair) != 4 { return 2; }
+          if offsetof(struct Pair, b) != 4 { return 3; }
+          return 0;
+      }
+    CND
+  end
+
+  # ---------- void pointers ----------
+
+  def test_void_ptr_coerce_ir
+    ir = gen_ok("extern fn memset(dst: *void, c: i32, n: usize) -> *void;\nfn main() { let mut x: u64 = 1; memset(&x, 0, 8); }")
+    assert_ir_includes ir, "declare ptr @memset(ptr, i32, i64)", "call ptr (ptr, i32, i64) @memset(ptr %p.x.1"
+  end
 end

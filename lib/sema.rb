@@ -1,3 +1,5 @@
+require_relative "layout"
+
 module Cinder
   class Sema
     include AST
@@ -44,11 +46,14 @@ module Cinder
       @statics_type = {}
       @statics_value = {}
       @expr_type = {}
+      @layout = Layout.new(self)
+      @static_asserts = []
     end
 
     def check
       collect_decls
       resolve_all_types
+      check_static_asserts
       check_bodies
     end
 
@@ -59,6 +64,10 @@ module Cinder
     def collect_decls
       @program.decls.each do |decl|
         next unless target_ok?(decl)
+        if decl.is_a?(StaticAssertStmt)
+          @static_asserts << decl
+          next
+        end
         if @globals.key?(decl.name)
           report(decl, "duplicate definition of `#{decl.name}`")
           next
@@ -72,6 +81,10 @@ module Cinder
         when StaticDecl then @statics[decl.name] = decl
         end
       end
+    end
+
+    def check_static_asserts
+      @static_asserts.each { |sa| check_static_assert(sa, Context.new) }
     end
 
     def target_ok?(decl)
@@ -142,15 +155,10 @@ module Cinder
           t
         end
       when PointerType
-        inner = resolve_type(t.elem, module_file)
-        if inner == UNKNOWN
-          t.elem = inner
+        if void_type?(t.elem)
           t
-        elsif void_type?(inner)
-          report(t, "pointer to void is not allowed", module_file)
-          UNKNOWN
         else
-          t.elem = inner
+          t.elem = resolve_type(t.elem, module_file)
           t
         end
       when ArrayType
@@ -181,6 +189,16 @@ module Cinder
         if void_type?(t.inner)
           report(t, "invalid element type void", module_file)
           t.inner = UNKNOWN
+        end
+        t
+      when FunctionType
+        t.params = t.params.map { |p| resolve_type(p, module_file) }
+        if t.ret
+          if void_type?(t.ret)
+            t.ret = nil
+          else
+            t.ret = resolve_type(t.ret, module_file)
+          end
         end
         t
       else
@@ -242,6 +260,24 @@ module Cinder
         else
           node.elements.map { |e| eval_const(e, module_file) }
         end
+      when SizeofExpr
+        t = resolve_type(node.type_node, module_file)
+        raise ConstError, "cannot compute the size of an invalid type" if t == UNKNOWN
+        node.value = @layout.size(t)
+        node.value
+      when AlignofExpr
+        t = resolve_type(node.type_node, module_file)
+        raise ConstError, "cannot compute the alignment of an invalid type" if t == UNKNOWN
+        node.value = @layout.align(t)
+        node.value
+      when OffsetofExpr
+        t = resolve_type(node.type_node, module_file)
+        raise ConstError, "cannot compute the offset of an invalid type" if t == UNKNOWN
+        raise ConstError, "offsetof requires a struct type" unless struct_type?(t)
+        off = @layout.field_offset(t.resolved, node.field)
+        raise ConstError, "struct has no field `#{node.field}`" if off.nil?
+        node.value = off
+        off
       else
         raise ConstError, "not a constant expression"
       end
@@ -299,6 +335,7 @@ module Cinder
       when VarExpr then @const_types[node.name] || UNKNOWN
       when UnaryExpr then node.op == "-" ? infer_const_type(node.operand) : UNKNOWN
       when CastExpr then resolve_type(node.type, nil)
+      when SizeofExpr, AlignofExpr, OffsetofExpr then PrimitiveType.new(node.line, node.col, name: "usize")
       when BinaryExpr
         a = infer_const_type(node.lhs)
         b = infer_const_type(node.rhs)
@@ -393,6 +430,7 @@ module Cinder
       when PointerType then "#{pointer_qualifiers(t)}#{type_name(t.elem)}"
       when OptionalType then "?#{type_name(t.inner)}"
       when ErrorType then "!#{type_name(t.inner)}"
+      when FunctionType then "fn(#{t.params.map { |p| type_name(p) }.join(', ')})#{t.ret ? " -> #{type_name(t.ret)}" : ''}"
       when nil then "void"
       when UNKNOWN then "<?>"
       else t.inspect
@@ -411,8 +449,18 @@ module Cinder
       when PointerType then b.is_a?(PointerType) && (a.const ? true : false) == (b.const ? true : false) && (a.volatile ? true : false) == (b.volatile ? true : false) && equal(a.elem, b.elem)
       when OptionalType then b.is_a?(OptionalType) && equal(a.inner, b.inner)
       when ErrorType then b.is_a?(ErrorType) && equal(a.inner, b.inner)
+      when FunctionType
+        b.is_a?(FunctionType) &&
+          a.params.length == b.params.length &&
+          a.params.zip(b.params).all? { |x, y| equal(x, y) } &&
+          fn_ret_equal(a.ret, b.ret)
       else false
       end
+    end
+
+    def fn_ret_equal(a, b)
+      return true if a.nil? && b.nil?
+      !a.nil? && !b.nil? && equal(a, b)
     end
 
     def compatible(actual, expected, node, ctx)
@@ -422,6 +470,11 @@ module Cinder
 
       return true if equal(actual, expected)
       return true if actual == UNKNOWN || expected == UNKNOWN
+
+      if actual.is_a?(PointerType) && expected.is_a?(PointerType) &&
+         void_type?(expected.elem) && !void_type?(actual.elem)
+        return true
+      end
 
       case node
       when IntLiteral
@@ -441,7 +494,7 @@ module Cinder
       when NoneLiteral
         return true if expected.is_a?(OptionalType) || expected.is_a?(ErrorType)
       when NullLiteral
-        return true if expected.is_a?(PointerType)
+        return true if expected.is_a?(PointerType) || expected.is_a?(FunctionType)
       when StringLiteral
         return true if equal(string_literal_type(node), expected)
       when ArrayLiteralExpr
@@ -692,9 +745,23 @@ module Cinder
         with_unsafe(ctx) { check_block(node.block, ctx) }
       when AsmStmt
         report(node, "asm requires an unsafe block", ctx.module_file) unless ctx.in_unsafe
+      when StaticAssertStmt
+        check_static_assert(node, ctx)
       when ExprStmt
         infer_expr(node.expr, ctx)
       end
+    end
+
+    def check_static_assert(node, ctx)
+      value = begin
+        eval_const(node.cond, ctx.module_file)
+      rescue ConstError => e
+        report(node, "static_assert requires a constant expression: #{e.message}", ctx.module_file)
+        return
+      end
+      return if value.is_a?(Integer) && value != 0
+      return if value == true
+      report(node, "static_assert failed", ctx.module_file)
     end
 
     def check_block(block, ctx)
@@ -941,7 +1008,7 @@ module Cinder
           UNKNOWN
         end
       when NullLiteral
-        if expected.is_a?(PointerType)
+        if expected.is_a?(PointerType) || expected.is_a?(FunctionType)
           expected
         else
           report(node, "cannot infer type of `null`; annotate the type", ctx && ctx.module_file)
@@ -981,6 +1048,12 @@ module Cinder
       when AsmExpr
         report(node, "asm requires an unsafe block", ctx && ctx.module_file) unless ctx.in_unsafe
         UNKNOWN
+      when SizeofExpr
+        infer_sizeof(node, ctx)
+      when AlignofExpr
+        infer_alignof(node, ctx)
+      when OffsetofExpr
+        infer_offsetof(node, ctx)
       else
         UNKNOWN
       end
@@ -1005,10 +1078,45 @@ module Cinder
       when StaticDecl then @statics_type[name] || UNKNOWN
       when EnumDecl
         NamedType.new(node.line, node.col, name: name, resolved: decl)
+      when FnDecl then function_type_of(decl)
       else
         report(node, "`#{name}` is not a value", ctx.module_file)
         UNKNOWN
       end
+    end
+
+    def function_type_of(decl)
+      FunctionType.new(0, 0, params: decl.params.map(&:type), ret: decl.return_type)
+    end
+
+    def infer_sizeof(node, ctx)
+      t = resolve_type(node.type_node, ctx.module_file)
+      return usize_type(node) if t == UNKNOWN
+      node.value = @layout.size(t)
+      usize_type(node)
+    end
+
+    def infer_alignof(node, ctx)
+      t = resolve_type(node.type_node, ctx.module_file)
+      return usize_type(node) if t == UNKNOWN
+      node.value = @layout.align(t)
+      usize_type(node)
+    end
+
+    def infer_offsetof(node, ctx)
+      t = resolve_type(node.type_node, ctx.module_file)
+      return usize_type(node) if t == UNKNOWN
+      unless struct_type?(t)
+        report(node, "offsetof requires a struct type, found #{type_name(t)}", ctx.module_file)
+        return usize_type(node)
+      end
+      off = @layout.field_offset(t.resolved, node.field)
+      if off.nil?
+        report(node, "struct `#{t.name}` has no field `#{node.field}`", ctx.module_file)
+        return usize_type(node)
+      end
+      node.value = off
+      usize_type(node)
     end
 
     def infer_unary(node, ctx)
@@ -1031,7 +1139,9 @@ module Cinder
         end
       when "&"
         t = infer_expr(node.operand, ctx)
-        if t.nil?
+        if t.is_a?(FunctionType)
+          t
+        elsif t.nil?
           report(node, "cannot take the address of a void expression", ctx.module_file)
           UNKNOWN
         else
@@ -1044,7 +1154,12 @@ module Cinder
         end
         t = infer_expr(node.operand, ctx)
         if t.is_a?(PointerType)
-          t.elem
+          if void_type?(t.elem)
+            report(node, "cannot dereference a void pointer", ctx.module_file)
+            UNKNOWN
+          else
+            t.elem
+          end
         elsif t == UNKNOWN
           UNKNOWN
         else
@@ -1137,8 +1252,12 @@ module Cinder
     end
 
     def pointer_or_null?(a, b, node)
-      (a.is_a?(PointerType) && node.rhs.is_a?(NullLiteral)) ||
-        (b.is_a?(PointerType) && node.lhs.is_a?(NullLiteral))
+      (ptr_like?(a) && node.rhs.is_a?(NullLiteral)) ||
+        (ptr_like?(b) && node.lhs.is_a?(NullLiteral))
+    end
+
+    def ptr_like?(t)
+      t.is_a?(PointerType) || t.is_a?(FunctionType)
     end
 
     def aggregate_compare?(t)
@@ -1163,7 +1282,7 @@ module Cinder
       rhs = node.rhs
       if nullish?(lhs) || noneish?(lhs)
         b = infer_expr(rhs, ctx)
-        expected = if nullish?(lhs) && b.is_a?(PointerType)
+        expected = if nullish?(lhs) && ptr_like?(b)
                      b
                    elsif noneish?(lhs) && b.is_a?(OptionalType)
                      b
@@ -1172,7 +1291,7 @@ module Cinder
         [a, b]
       elsif nullish?(rhs) || noneish?(rhs)
         a = infer_expr(lhs, ctx)
-        expected = if nullish?(rhs) && a.is_a?(PointerType)
+        expected = if nullish?(rhs) && ptr_like?(a)
                      a
                    elsif noneish?(rhs) && a.is_a?(OptionalType)
                      a
@@ -1201,9 +1320,14 @@ module Cinder
       if numeric_type?(src) && numeric_type?(dst)
         return dst
       end
-      if src.is_a?(PointerType) && dst.is_a?(PointerType) && equal(src.elem, dst.elem)
-        if (!src.const || dst.const) && (!src.volatile || dst.volatile)
+      if src.is_a?(PointerType) && dst.is_a?(PointerType)
+        if void_type?(dst.elem) && !void_type?(src.elem)
           return dst
+        end
+        if equal(src.elem, dst.elem)
+          if (!src.const || dst.const) && (!src.volatile || dst.volatile)
+            return dst
+          end
         end
       end
       report(node, "cast from #{type_name(src)} to #{type_name(dst)} requires an unsafe block", ctx.module_file)
@@ -1220,23 +1344,35 @@ module Cinder
 
     def infer_call(node, ctx)
       callee = node.callee
-      unless callee.is_a?(VarExpr)
-        report(node, "cannot call a non-function value", ctx.module_file)
-        return UNKNOWN
-      end
-      if lookup_var(callee.name, ctx)
-        report(node, "`#{callee.name}` is a variable, not a function", ctx.module_file)
-        return UNKNOWN
-      end
-      fn = @fns[callee.name]
-      if fn.nil?
-        if @consts.key?(callee.name) || @statics.key?(callee.name)
-          report(node, "`#{callee.name}` is not a function", ctx.module_file)
-        else
-          report(node, "unknown function `#{callee.name}`", ctx.module_file)
+      if callee.is_a?(VarExpr)
+        local = lookup_var(callee.name, ctx)
+        if local
+          if local.type.is_a?(FunctionType)
+            return infer_indirect_call(node, local.type, ctx)
+          end
+          report(node, "`#{callee.name}` is a variable, not a function", ctx.module_file)
+          return UNKNOWN
         end
-        return UNKNOWN
+        fn = @fns[callee.name]
+        if fn.nil?
+          if @consts.key?(callee.name) || @statics.key?(callee.name)
+            report(node, "`#{callee.name}` is not a function", ctx.module_file)
+          else
+            report(node, "unknown function `#{callee.name}`", ctx.module_file)
+          end
+          return UNKNOWN
+        end
+        return infer_direct_call(node, fn, ctx)
       end
+      ft = infer_expr(callee, ctx)
+      if ft.is_a?(FunctionType)
+        return infer_indirect_call(node, ft, ctx)
+      end
+      report(node, "cannot call a value of type #{type_name(ft)}", ctx.module_file)
+      UNKNOWN
+    end
+
+    def infer_direct_call(node, fn, ctx)
       if ctx.module_file != fn.module_file && !fn.exported
         report(node, "cannot call `#{fn.name}`: it is private to its module", ctx.module_file)
         return UNKNOWN
@@ -1264,6 +1400,24 @@ module Cinder
       fn.return_type
     end
 
+    def infer_indirect_call(node, ft, ctx)
+      node.callee.sema_type = ft if node.callee.is_a?(Expr)
+      params = ft.params
+      if node.args.length != params.length
+        report(node, "function expects #{params.length} argument(s), got #{node.args.length}", ctx.module_file)
+        return UNKNOWN
+      end
+      params.zip(node.args).each do |param, arg|
+        at = infer_expr(arg, ctx, expected: param)
+        if at.nil?
+          report(arg, "cannot pass a void value to a function parameter", ctx.module_file)
+        elsif !compatible(at, param, arg, ctx)
+          report(arg, "type mismatch for parameter: expected #{type_name(param)}, found #{type_name(at)}", ctx.module_file)
+        end
+      end
+      ft.ret
+    end
+
     def infer_index(node, ctx)
       t = infer_expr(node.target, ctx)
       idx = infer_expr(node.index, ctx)
@@ -1279,6 +1433,10 @@ module Cinder
       when PointerType
         unless ctx.in_unsafe
           report(node, "pointer indexing requires an unsafe block", ctx.module_file)
+          return UNKNOWN
+        end
+        if void_type?(t.elem)
+          report(node, "cannot index a void pointer", ctx.module_file)
           return UNKNOWN
         end
         t.elem
@@ -1310,6 +1468,10 @@ module Cinder
       when PointerType
         unless ctx.in_unsafe
           report(node, "slicing a pointer requires an unsafe block", ctx.module_file)
+          return UNKNOWN
+        end
+        if void_type?(t.elem)
+          report(node, "cannot slice a void pointer", ctx.module_file)
           return UNKNOWN
         end
         report(node, "cannot slice a volatile pointer", ctx.module_file) if t.volatile

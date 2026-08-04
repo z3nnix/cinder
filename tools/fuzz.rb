@@ -19,13 +19,16 @@ require_relative "../lib/codegen"
 module Cinder
   class Fuzzer
     FRAGMENTS = {
-      types: %w[i32 u8 u16 u64 i64 f64 bool none void *u8 *i32 *void &&i32 [i32;4] []i32 ?i32 ?bool ?u8],
+      types: %w[i32 u8 u16 u64 i64 f64 bool none void *u8 *i32 *void &&i32 [i32;4] []i32 ?i32 ?bool ?u8
+                fn() -> i32 fn(i32) -> i32 fn(i32, i32) -> i32 fn() fn(*void) -> void *void *i32],
       exprs: %w[0 1 42 -1 3.14 true false none null x y acc i n ok a b arr[0]
                 arr[i] x + y a * b acc + i (a - b) * 2 x / 2 acc % 7
                 !ok -n x > 0 x < 100 x >= y x == y x != y
                 ok && ok ok || ok x as u8 y as i32 n as f64 3 as u8
                 compute(a, b) sum(x, 1) get() arr[i]? maybe()? p.0 f(1, 2, 3)
-                [1, 2, 3] Point { x: a, y: b } Color.Red .Red],
+                [1, 2, 3] Point { x: a, y: b } Color.Red .Red
+                sizeof(i32) sizeof(*void) sizeof(Point) alignof(i32) alignof(Point) offsetof(Point, y)
+                fp(1, 2) &compute],
       stmts: %w[
         let x: i32 = 1;
         let mut acc = 0;
@@ -162,10 +165,14 @@ module Cinder
     def random_function(main)
       name = main ? "main" : rand_name
       ret = main ? " -> i32" : (@rng.rand(3).zero? ? " -> #{random_type}" : "")
-      pool = ["x: i32", "y: i32", "a: i32", "b: u8", "n: i32", "ok: bool", "arr: [i32;4]"]
+      pool = ["x: i32", "y: i32", "a: i32", "b: u8", "n: i32", "ok: bool", "arr: [i32;4]",
+              "fp: fn(i32, i32) -> i32", "cb: fn() -> void", "vp: *void", "ptr: *i32"]
       params = pool.sample(@rng.rand(0..3), random: @rng).join(", ")
       body = random_stmts
       body = "let mut acc = 0;\n    " + body if @rng.rand(2).zero?
+      if @rng.rand(4).zero?
+        body = "let fp: fn(i32, i32) -> i32 = z7;\n    " + body
+      end
       "fn #{name}(#{params})#{ret} {\n    #{body}\n}"
     end
 

@@ -51,6 +51,7 @@ return switch unsafe use while volatile
 The word `static` is a contextual keyword.
 The word `struct` is a contextual keyword.
 The word `export` is a contextual keyword.
+The words `sizeof`, `alignof`, `offsetof`, and `static_assert` are contextual keywords.
 The words `true`, `false`, `none`, and `null` are reserved literal spellings.
 
 ### 3.2 Comments
@@ -283,6 +284,24 @@ let c: *const volatile u32 = ...;
 Pointer arithmetic requires an `unsafe` block.
 Dereferencing a raw pointer requires an `unsafe` block.
 
+The type `*void` is a pointer to an unknown type.
+A pointer to a concrete type coerces implicitly to `*void`.
+A `*void` value cannot be dereferenced, indexed, or sliced.
+Converting `*void` back to a concrete pointer type requires an `unsafe` cast.
+
+```cinder
+extern fn memset(dst: *void, c: i32, n: usize) -> *void;
+
+fn main() {
+    let mut buf: [8]u8 = [0; 8];
+    memset(&buf, 0, 8);                 // [8]u8 coerces to *void
+    let p: *void = malloc(16) else { return; };
+    unsafe {
+        let q: *i32 = p as *i32;        // *void -> *i32 requires unsafe
+    }
+}
+```
+
 ### 5.5 Optional Types
 
 An optional type is `?T`.
@@ -310,6 +329,25 @@ fn read_sensor() !u16 {
 
 The type `void` is allowed only as a function return type.
 A function with no return type is a void function.
+
+### 5.8 Function Types
+
+A function type is written `fn(Params) -> Ret`.
+The parameter list can be empty: `fn()`.
+The return type can be omitted, in which case the function type returns `void`:
+
+```cinder
+let handler: fn(i32) -> i32 = double;   // bare function name
+let printer: fn() = print_line;         // void-returning function type
+let also: fn(i32) -> i32 = &double;     // & is allowed, same result
+```
+
+Function types are pointer-sized.
+They may be used in variables, parameters, struct fields, and extern signatures.
+A function pointer value is invoked with a normal call: `handler(x)`.
+
+The literal `null` is assignable to a function type, and function pointers can be compared against `null`.
+Function values are the functions themselves; the address-of operator `&` on a function name yields the same function pointer.
 
 ---
 
@@ -450,6 +488,22 @@ The ellipsis `...` marks the variadic part.
 
 ```cinder
 extern fn printf(fmt: *u8, ...) -> i32;
+```
+
+An external function can take function pointers and `*void` parameters.
+This is the bridge for C callbacks:
+
+```cinder
+extern fn atexit(cb: fn() -> void) -> i32;
+extern fn qsort(base: *void, nmemb: usize, size: usize, compar: fn(*void, *void) -> i32);
+
+fn goodbye() {
+    println("bye");
+}
+
+fn main() {
+    atexit(goodbye);          // pass a Cinder function to C
+}
 ```
 
 ### 7.5 Function Attributes
@@ -614,6 +668,34 @@ let s = sum(1, 2,);
 The `?` operator on a call result is the error propagation operator.
 Section 14 describes the `?` operator.
 
+### 8.8 sizeof, alignof, offsetof
+
+The type operator `sizeof(T)` is the size of T in bytes.
+The type operator `alignof(T)` is the alignment of T in bytes.
+The type operator `offsetof(T, field)` is the byte offset of a struct field.
+All three return a `usize` value and are constant expressions.
+
+```cinder
+struct Pair {
+    a: i32,
+    b: u8,
+}
+
+const PAIR_SIZE: usize = sizeof(Pair);       // 8
+const A_OFFSET: usize = offsetof(Pair, a);   // 0
+const B_OFFSET: usize = offsetof(Pair, b);   // 4
+```
+
+A `struct` type may be written with or without the `struct` keyword prefix inside a type context:
+
+```cinder
+sizeof(struct Pair)   // same as sizeof(Pair)
+```
+
+The sizes, alignments, and offsets follow the C ABI of the target
+(the LLVM DataLayout), so shared structs agree with C.
+They are constant, so they can be used in `const`, array lengths, and `static_assert`.
+
 ---
 
 ## 9. Control Flow
@@ -707,6 +789,24 @@ switch c {
     Color.Red => log("red");
     .Green => log("green");
     .Blue => log("blue");
+}
+```
+
+### 9.4 static_assert
+
+The statement `static_assert(cond);` checks a constant expression at compile time.
+If the condition is false, the compiler reports an error.
+The condition must be a constant expression.
+
+`static_assert` may appear at the top level of a module or inside a function body.
+
+```cinder
+static_assert(sizeof(i32) == 4);
+static_assert(sizeof(Pair) == 8);
+static_assert(offsetof(Pair, b) == 4);
+
+fn main() {
+    static_assert(alignof(i64) == 8);
 }
 ```
 

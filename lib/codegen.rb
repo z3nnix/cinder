@@ -259,7 +259,8 @@ module Cinder
 
     def float_const(value, f32 = false)
       if f32
-        "0x" + [value].pack("g").unpack1("H*")
+        bits = [value].pack("f").unpack1("V")
+        "bitcast (i32 #{bits} to float)"
       else
         "0x" + [value].pack("G").unpack1("H*")
       end
@@ -1215,8 +1216,7 @@ module Cinder
     def gen_call(node)
       callee = node.callee
       if callee.is_a?(VarExpr) && (fn = @fns[callee.name])
-        fixed = fn.params.zip(node.args).map { |p, a| "#{llvm_type(p.type)} #{gen_as(a, p.type)}" }
-        return gen_port_io(fn, fixed) if port_io?(fn)
+        return gen_port_io(fn, fn.params.zip(node.args).map { |p, a| "#{llvm_type(p.type)} #{gen_as(a, p.type)}" }) if port_io?(fn)
         return gen_direct_call(node, fn)
       end
       gen_indirect_call(node)

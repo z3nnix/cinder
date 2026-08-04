@@ -610,4 +610,29 @@ class CodegenTest < Minitest::Test
     ir = gen_ok("extern fn memset(dst: *void, c: i32, n: usize) -> *void;\nfn main() { let mut x: u64 = 1; memset(&x, 0, 8); }")
     assert_ir_includes ir, "declare ptr @memset(ptr, i32, i64)", "call ptr (ptr, i32, i64) @memset(ptr %p.x.1"
   end
+
+  # ---------- evaluation ----------
+
+  def test_call_args_evaluated_once
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      static count: i32 = 0;
+
+      fn bump() -> i32 {
+          count += 1;
+          return count;
+      }
+
+      fn show(v: i32) -> i32 {
+          return v;
+      }
+
+      fn main() -> i32 {
+          let got = show(bump() as i32);
+          if got != 1 { return 1; }
+          if count != 1 { return 2; }
+          return 0;
+      }
+    CND
+  end
 end

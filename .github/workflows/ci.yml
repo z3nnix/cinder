@@ -22,7 +22,7 @@ jobs:
       - name: Run unit tests
         run: |
           set -e
-          for t in lexer parser sema codegen build extern loader chip8 baremetal; do
+          for t in lexer parser sema codegen build extern loader chip8 baremetal docs; do
             ruby -I test test/${t}_test.rb
           done
 

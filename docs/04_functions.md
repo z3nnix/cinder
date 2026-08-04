@@ -2,7 +2,7 @@
 
 Functions start with `fn`, take typed parameters, and return one value.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn add(a: i32, b: i32) -> i32 {
@@ -37,7 +37,7 @@ not positive
 Parameters are read-only. Pass by value; pass a pointer to mutate the caller's
 value (see [Pointers](12_pointers_unsafe.md)).
 
-```cinder
+```rust
 fn scale(v: i32, k: i32) -> i32 {
     return v * k;
 }
@@ -47,7 +47,7 @@ fn scale(v: i32, k: i32) -> i32 {
 
 A function without a return type returns nothing.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn announce(tag: []u8) {
@@ -72,7 +72,7 @@ $ ./void
 
 `return` exits the function immediately.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn classify(v: i32) -> []u8 {
@@ -105,7 +105,7 @@ positive
 A function may itself be marked `unsafe`. Its body is treated as an `unsafe`
 block, and every call site must be inside `unsafe`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 unsafe fn peek(v: *u32) -> u32 {

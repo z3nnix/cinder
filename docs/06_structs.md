@@ -2,7 +2,7 @@
 
 A `struct` groups named, typed fields.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Point {
@@ -30,7 +30,7 @@ $ ./structs
 The binding must be `mut`, and the field must be assigned, not the whole
 struct.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Counter {
@@ -58,7 +58,7 @@ $ ./mut_struct
 Cinder has no methods; a function takes a pointer to the struct. This is the
 usual "method" pattern.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Rect {
@@ -99,7 +99,7 @@ Field access through a pointer is automatic: `r.w` reads through `r`.
 `sizeof(T)`, `alignof(T)`, and `offsetof(T, field)` are compile-time
 constants. They match the C ABI of the target.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Pair {

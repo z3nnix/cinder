@@ -2,7 +2,7 @@
 
 The smallest Cinder program prints a line and returns the exit code `0`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -28,7 +28,7 @@ Hello, world!
 
 The return value of `main` becomes the exit code of the program.
 
-```cinder
+```rust
 // docs: check
 fn main() -> i32 {
     return 3;
@@ -46,7 +46,7 @@ $ echo $?
 
 `main` may also be a void function. The exit code is then `0`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() {

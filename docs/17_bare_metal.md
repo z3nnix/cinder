@@ -47,7 +47,7 @@ SECTIONS {
 
 `main.cnd`:
 
-```cinder
+```rust
 use "std/x86.cnd";
 
 unsafe fn uart_init() {
@@ -107,7 +107,7 @@ name.
 The `#[target("x86_64-freestanding")]` attribute restricts a declaration to
 the freestanding target:
 
-```cinder
+```rust
 #[target("x86_64-freestanding")]
 fn uart_putc(c: u8) {
     unsafe { outb(0x3F8, c); }

@@ -16,7 +16,7 @@ Cinder has integer types of every width, floats, `bool`, `char`, and strings.
 An integer literal is `i32` by default. A suffix changes the type, and `_`
 separates digits.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -53,7 +53,7 @@ The negative sign is a unary operator, so `-1` on a `u8` is also an error.
 
 A float literal is `f64` by default; the `f32` suffix changes it.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -75,7 +75,7 @@ pi ~= 3
 
 `true` and `false` are the two `bool` values.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -98,7 +98,7 @@ going
 A character literal is a single ASCII byte in single quotes and has type
 `i32`. Escape sequences are supported.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -131,7 +131,7 @@ A string literal has type `[]u8`: a slice of bytes. Four prefixes exist:
 | `b` | byte string, escapes kept as-is |
 | `c` | C string, null-terminated, type `*u8` |
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -156,7 +156,7 @@ nul-terminated
 
 String indexing returns a byte. Iterating a string visits its bytes.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {

@@ -3,7 +3,7 @@
 `extern fn` declares a function defined outside the program. It links against
 the system C library by default.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 extern fn abs(n: i32) -> i32;
@@ -28,7 +28,7 @@ The `c"..."` literal produces a `[]u8` with a trailing zero byte, the form C
 functions expect. `c"hello"` can be passed directly to C functions that accept
 a pointer - the trailing null is part of the string.
 
-```cinder
+```rust
 // docs: skip
 use "std/io.cnd";
 
@@ -52,7 +52,7 @@ $ ./cstr
 C functions that return allocations come back as raw pointers. Dereferencing
 and indexing them is `unsafe`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 extern fn malloc(size: usize) -> *u8;
@@ -84,7 +84,7 @@ Structs use the C ABI: sizes, alignments, and offsets match C on the same
 target. Use `sizeof`/`offsetof` to stay in sync (see
 [Compile-Time Code](11_compile_time.md)).
 
-```cinder
+```rust
 struct timespec {
     tv_sec: i64;
     tv_nsec: i64;
@@ -96,14 +96,14 @@ struct timespec {
 An ellipsis `...` marks the variadic part of an extern signature. This is how
 `printf` is declared in the standard library:
 
-```cinder
+```rust
 // docs: skip
 extern fn printf(fmt: *u8, ...) -> i32;
 ```
 
 Call it like C:
 
-```cinder
+```rust
 // docs: skip
 printf(c"%s\n", p);
 ```

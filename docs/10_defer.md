@@ -3,7 +3,7 @@
 `defer` schedules a statement to run at the end of the enclosing scope.
 It runs even if the scope exits early via `return`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -25,7 +25,7 @@ cleanup (runs first)
 
 Deferred statements run in reverse order: the last `defer` runs first.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -47,7 +47,7 @@ $ ./defer_order
 
 A `defer` can carry a condition, which is evaluated at exit time.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -66,7 +66,7 @@ flagged
 
 The deferred code runs before the function actually returns.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn early() -> i32 {

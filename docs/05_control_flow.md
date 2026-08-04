@@ -2,7 +2,7 @@
 
 ## if / else
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -27,7 +27,7 @@ warm
 
 An `if` can produce a value. Both branches must have the same type.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -48,7 +48,7 @@ odd
 `loop` repeats forever. `break` stops it, `continue` jumps to the next
 iteration.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -72,7 +72,7 @@ $ ./loop
 
 ## while
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -96,7 +96,7 @@ $ ./while
 `0..10` is exclusive, `0..=10` is inclusive. The loop variable is `i32`
 (or the annotated type).
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -117,7 +117,7 @@ $ ./forrange
 
 A `usize` range is useful for indexing.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -139,7 +139,7 @@ $ ./foridx
 
 The `for v in coll` form iterates arrays, slices, and strings.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -164,7 +164,7 @@ $ ./foriter
 `switch` can match integers, integer ranges, enums, and strings. A final
 `else` handles everything else.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {

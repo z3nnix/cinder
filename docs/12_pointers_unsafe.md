@@ -7,7 +7,7 @@ dereference, arithmetic, or cast on them must happen inside an `unsafe` block.
 
 Taking the address of a local is safe. Dereferencing requires `unsafe`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -31,7 +31,7 @@ $ ./pointers
 
 The usual "method" pattern: pass `&value`, mutate through the pointer.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn swap(a: *i32, b: *i32) {
@@ -63,7 +63,7 @@ $ ./swap
 
 A string is a slice; `s.ptr` points at its first byte.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -87,7 +87,7 @@ $ ./strptr
 
 The literal `null` is the null pointer. Never dereference it.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -108,7 +108,7 @@ null pointer
 
 `*const` reads only; `*volatile` reads/writes go around optimization.
 
-```cinder
+```rust
 let a: *const u32 = &value;      // read-only
 let b: *volatile u32 = &reg;     // volatile access
 let c: *const volatile u32 = &reg;
@@ -119,7 +119,7 @@ let c: *const volatile u32 = &reg;
 `*void` is a pointer to an unknown type. Any pointer coerces to `*void`;
 converting back requires an unsafe cast.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -143,7 +143,7 @@ $ ./voidptr
 
 Arithmetic on pointers (and indexing) is `unsafe`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -169,7 +169,7 @@ $ ./ptradd
 A function marked `unsafe` may be called only inside an `unsafe` block. Its
 body is already unsafe.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 unsafe fn read_u32(p: *u32) -> u32 {
@@ -195,7 +195,7 @@ $ ./unsafe_fn
 
 Inline assembly is available inside `unsafe`.
 
-```cinder
+```rust
 // docs: kernel
 unsafe {
     asm("wfi");

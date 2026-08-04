@@ -3,7 +3,7 @@
 A function type is `fn(Params) -> Ret`. Assign a bare function name to get a
 pointer-sized value, then call it normally.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn double(v: i32) -> i32 { return v * 2; }
@@ -35,7 +35,7 @@ $ ./fnptr
 Function types are ordinary values: variables, parameters, struct fields, and
 extern signatures.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn on_key(key: u8) {
@@ -62,7 +62,7 @@ $ ./callback
 `null` is assignable to a function type, and function pointers can be compared
 against `null`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -83,7 +83,7 @@ not set
 
 A struct of function pointers is a tiny vtable.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Format {

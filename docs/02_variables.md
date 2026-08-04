@@ -3,7 +3,7 @@
 A `let` binding declares a local variable. Cinder infers the type from the
 initializer.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -33,7 +33,7 @@ pi = 3
 
 The type can be written explicitly after a colon.
 
-```cinder
+```rust
 let a: u8 = 200;        // small unsigned integer
 let b: i64 = -5;        // large signed integer
 let c: usize = 1024;    // pointer-sized unsigned
@@ -44,7 +44,7 @@ let s: []u8 = "hi";     // string as a slice of bytes
 
 Bindings are immutable by default. `mut` makes a binding assignable.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -70,7 +70,7 @@ $ ./vars
 A new `let` in the same scope shadows the old binding. The old value is
 still referenced until the shadowing binding.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -94,7 +94,7 @@ $ ./shadow
 A `const` is a compile-time constant. It must have a value computable at
 compile time and cannot be changed.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 const MAX_ITEMS: u32 = 64;
@@ -119,7 +119,7 @@ $ ./const
 
 A `static` is a global variable with a single instance per program.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 static CALLS: u32 = 0;

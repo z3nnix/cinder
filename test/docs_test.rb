@@ -63,7 +63,7 @@ class DocsTest < Minitest::Test
     result = []
     i = 0
     while i < lines.length
-      if lines[i].strip =~ /^```cinder\b?/
+      if lines[i].strip =~ /^```rust\b?/
         line_no = i + 1
         i += 1
         buf = []

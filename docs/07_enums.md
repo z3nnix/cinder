@@ -2,7 +2,7 @@
 
 An `enum` is a type with named variants.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 enum Color {
@@ -38,7 +38,7 @@ blue
 
 When the type is known, the variant can be written as `.Variant`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 enum Direction {
@@ -75,7 +75,7 @@ $ ./shorthand
 An enum is the natural error type. Returning a variant from a `!T` function
 signals an error. See [Optionals and Errors](09_optionals_errors.md).
 
-```cinder
+```rust
 enum IoError {
     NotFound;
     PermissionDenied;
@@ -88,7 +88,7 @@ enum IoError {
 An enum value is stored as its variant index. Use `switch` to branch.
 Converting an enum to its index is an unsafe cast:
 
-```cinder
+```rust
 unsafe {
     let idx = Color.Blue as i32;   // 2
 }

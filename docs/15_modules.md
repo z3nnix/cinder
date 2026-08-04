@@ -5,7 +5,7 @@ Everything else is private to the module.
 
 ## Writing a module
 
-```cinder
+```rust
 // lib/queue.cnd
 export struct Queue {
     data: [16]u8;
@@ -36,7 +36,7 @@ fn q_secret() { }    // private: not visible to importers
 The path is resolved relative to the current file, then against the include
 directories. `std/` is always on the search path.
 
-```cinder
+```rust
 // docs: skip
 use "queue.cnd";
 use "std/io.cnd";
@@ -65,7 +65,7 @@ To build: `./cinder build main.cnd --emit=bin -o main -I lib`.
 `export` works on functions, structs, enums, constants, statics, and extern
 functions.
 
-```cinder
+```rust
 export const VERSION = 1;
 export static SEED: u32 = 0x1234;
 
@@ -77,7 +77,7 @@ export extern fn puts(s: []u8) -> i32;
 `#[target("...")]` restricts a declaration to one target. Known targets are
 `x86_64` and `x86_64-freestanding`.
 
-```cinder
+```rust
 // docs: skip
 #[target("x86_64-freestanding")]
 fn uart_putc(c: u8) { }

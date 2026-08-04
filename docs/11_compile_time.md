@@ -5,7 +5,7 @@ constant expressions.
 
 ## const
 
-```cinder
+```rust
 use "std/io.cnd";
 
 const SPEED_OF_LIGHT = 299_792_458;
@@ -29,7 +29,7 @@ $ ./consts
 
 `static_assert` fails the build if the condition is false.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 static_assert(4 * 4 == 16);
@@ -49,7 +49,7 @@ built
 
 A failing assertion stops compilation:
 
-```cinder
+```rust
 // docs: error
 static_assert(1 == 2);
 fn main() -> i32 { return 0; }
@@ -59,7 +59,7 @@ fn main() -> i32 { return 0; }
 
 These follow the C ABI of the target, so shared structs agree with C.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 struct Record {
@@ -90,7 +90,7 @@ $ ./layout2
 
 A constant can be used where a compile-time number is expected.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 const BUFFER_CAP = 64;

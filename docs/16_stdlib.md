@@ -7,7 +7,7 @@ path. Load them with `use`.
 
 `std/io.cnd` has print helpers and readers.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -40,7 +40,7 @@ hello
 `std/vec.cnd` is a growable byte buffer. Functions take a pointer to the
 struct; methods would be pointless without mutation.
 
-```cinder
+```rust
 use "std/io.cnd";
 use "std/vec.cnd";
 
@@ -72,7 +72,7 @@ $ ./vec
 
 `std/string.cnd` is an owning, growable string built on Vec.
 
-```cinder
+```rust
 use "std/io.cnd";
 use "std/string.cnd";
 
@@ -95,7 +95,7 @@ cinder
 
 `std/core/str.cnd` is pure and allocation-free.
 
-```cinder
+```rust
 use "std/io.cnd";
 use "std/core/str.cnd";
 
@@ -128,7 +128,7 @@ portable helpers.
 `std/alloc.cnd` exposes `alloc(n)`, `alloc_realloc(p, n)`, and `dealloc(p)`
 backed by libc on hosted targets.
 
-```cinder
+```rust
 use "std/io.cnd";
 use "std/alloc.cnd";
 

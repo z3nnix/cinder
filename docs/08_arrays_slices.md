@@ -7,7 +7,7 @@ and a length.
 
 The type `[N]T` is an array of N values of type T.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -33,7 +33,7 @@ The repeat literal `[v; n]` fills an array with the same value.
 In debug mode an out-of-bounds index traps. Constant indexes are checked at
 compile time; runtime indexes are checked in debug builds.
 
-```cinder
+```rust
 // docs: error
 fn main() -> i32 {
     let a = [1, 2, 3];
@@ -46,7 +46,7 @@ fn main() -> i32 {
 The type `[]T` is a slice. Slices are made by slicing an array, taking an
 existing slice, or using a string literal.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -67,7 +67,7 @@ $ ./slices
 
 A slice keeps a pointer and a length: `s.ptr` and `s.len`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn total(vals: []i32) -> i32 {
@@ -98,7 +98,7 @@ $ ./slice_fn
 
 A string literal is a `[]u8`. Its `.ptr` points at the first byte.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {
@@ -120,7 +120,7 @@ $ ./strslice
 
 `[..]`, `[a..]`, `[..b]`, and `[a..b]` all work.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn main() -> i32 {

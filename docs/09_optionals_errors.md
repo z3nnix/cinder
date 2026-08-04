@@ -7,7 +7,7 @@ Cinder has no `NULL` in safe code. Missing values use `?T`, and failure uses
 
 `?T` is either a `T` value or `none`.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn maybe_name(id: i32) -> ?[]u8 {
@@ -39,7 +39,7 @@ a is none
 runs and the binding fails; the block must leave the function (return, break,
 or panic).
 
-```cinder
+```rust
 use "std/io.cnd";
 
 fn show(v: ?i32) -> i32 {
@@ -65,7 +65,7 @@ $ ./else_bind
 
 `!T` is either a `T` value or an error. Errors are usually enum variants.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 enum Err {
@@ -105,7 +105,7 @@ division by zero
 
 Inside a function that returns an error type, `?` propagates the error.
 
-```cinder
+```rust
 use "std/io.cnd";
 
 enum Err {
@@ -145,7 +145,7 @@ error propagated
 Lookups return `?T`: `read_byte() -> ?u8`, `vec_get() -> ?u8`,
 `str_index_of() -> ?usize`. Parse helpers return `?T` too:
 
-```cinder
+```rust
 use "std/io.cnd";
 use "std/core/str.cnd";
 

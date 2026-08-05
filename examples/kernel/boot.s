@@ -48,7 +48,7 @@ start64:
     movw %ax, %ss
 
     movabs $boot_stack_top, %rsp
-    call cinder_kernel_main
+    call cinder_kmain
     cli
     hlt
     jmp start64

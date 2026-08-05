@@ -6,7 +6,7 @@ require "open3"
 class BaremetalTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   MAIN = File.join(ROOT, "main.rb")
-  KERNEL = File.join(ROOT, "examples", "kernel", "main.cnd")
+  KERNEL = File.join(ROOT, "examples", "kernel", "src", "main.cnd")
   LINKER = File.join(ROOT, "examples", "kernel", "linker.ld")
   BOOT = File.join(ROOT, "examples", "kernel", "boot.s")
 

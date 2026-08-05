@@ -1,0 +1,44 @@
+const VGA_HEIGHT = 25;
+const VGA_WIDTH = 80;
+const VGA_AREA = 25 * 80;
+
+static CURSOR_X: i32 = 0;
+static CURSOR_Y: i32 = 0;
+static COLOR: u8 = 0x0F;
+
+export fn vga_init() {
+    for i in 0..=VGA_AREA {
+        vga_print(" ");
+    }
+
+    CURSOR_X = 0;
+    CURSOR_Y = 0;
+}
+
+fn vga_idx(row: i32, col: i32) -> usize inline {
+    return (row * VGA_WIDTH + col) as usize;
+}
+
+unsafe fn vga_putch(ch: u8) {
+    let video = 0xB8000 as *u16;
+    let idx = vga_idx(CURSOR_Y, CURSOR_X);
+    let cell = (COLOR as u16) << 8 | (ch as u16);
+    video[idx] = cell;
+
+    CURSOR_X += 1;
+    if CURSOR_X >= VGA_WIDTH {
+        CURSOR_X = 0;
+        CURSOR_Y += 1;
+        if CURSOR_Y >= VGA_HEIGHT {
+            CURSOR_Y = VGA_HEIGHT - 1;
+        }
+    }
+}
+
+export fn vga_print(str: []u8) {
+    unsafe {
+        for ch in str {
+            vga_putch(ch);
+        }
+    }
+}

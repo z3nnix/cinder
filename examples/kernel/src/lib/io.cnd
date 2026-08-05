@@ -1,0 +1,4 @@
+export fn kprint(str: []u8) {
+    vga_print(str);
+    uart_print(str);
+}

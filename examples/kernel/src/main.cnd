@@ -1,0 +1,20 @@
+use "std/x86.cnd";
+use "drivers/uart.cnd";
+use "arch/x86/processor.cnd";
+use "arch/x86/vga.cnd";
+use "lib/io.cnd";
+
+fn early_init() {
+    unsafe {
+        uart_init();
+    }
+
+    vga_init();
+}
+
+export fn kmain() {
+    early_init();
+
+    kprint("Hello world!");
+    cpu_idle();
+}

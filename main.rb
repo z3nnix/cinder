@@ -12,10 +12,12 @@ require "sema"
 require "targets"
 require "codegen"
 
+$version = "0.1"
+
 module Cinder
   class CLI
     USAGE = <<~TXT
-      Usage: main.rb <command> [options] <file.cnd>
+      Usage: cinder <command> [options] <file.cnd>
 
       Commands:
         check <file>           run full pipeline: lexer -> parser -> loader -> sema
@@ -52,6 +54,9 @@ module Cinder
       case cmd
       when nil, "-h", "--help"
         @stdout.puts USAGE
+        return 0
+      when "--version"
+        puts "Cinder compiler v#{$version}-bootstrap"
         return 0
       when "check", "build", "tokens", "ast"
         run_command(cmd)

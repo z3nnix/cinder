@@ -449,6 +449,7 @@ module Cinder
       attrs << "alwaysinline" if fn.inline
       attrs << "naked" if fn.naked
       attrs << "noreturn" if fn.noreturn
+      attrs << 'noredzone' if @target_cfg[:freestanding]
       attrs
     end
 

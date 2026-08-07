@@ -6,3 +6,6 @@
 
 # compiled example binaries
 examples/*/main
+
+# cinder compiler binary
+dist/*

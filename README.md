@@ -12,7 +12,8 @@ fn main() -> i32 {
         "Hello world",
         "Привет, мир!",
         "¡Hola Mundo!",
-        "Привіт, світе!"
+        "Привіт, світе!",
+        "السلام عليكم!"
         ];
 
     for value in greetings {

@@ -53,14 +53,21 @@ use "std/io.cnd";
 
 fn main() -> i32 {
     let mut i = 0;
+    let sp: []u8 = " ";
+    let mut first = true;
     loop {
         i += 1;
         if i % 2 == 0 { continue; }
         if i > 7 { break; }
-        print_i32(i);
-        print(" ");
+
+        if !first { print(&sp, .S); }
+        first = false;
+
+        let v = i;
+        print(&v, .I32);
     }
-    print_newline();
+    putchar(10);
+
     return 0;
 }
 ```
@@ -80,8 +87,9 @@ fn main() -> i32 {
     while n < 100 {
         n *= 2;
     }
-    print_i32(n);
-    print_newline();
+
+    print(&n, .I32);
+    putchar(10);
     return 0;
 }
 ```
@@ -104,8 +112,9 @@ fn main() -> i32 {
     for i in 0..=10 {
         sum += i;
     }
-    print_i32(sum);   // 0+1+...+10 = 55
-    print_newline();
+
+    print(&sum, .I32);   // 0+1+...+10 = 55
+    putchar(10);
     return 0;
 }
 ```
@@ -123,9 +132,10 @@ use "std/io.cnd";
 fn main() -> i32 {
     let s = "abc";
     for i in 0usize..s.len {
-        print_u32(s[i] as u32);
+        let v: i32 = s[i] as i32;
+        print(&v, .I32);
     }
-    print_newline();
+    putchar(10);
     return 0;
 }
 ```
@@ -148,8 +158,9 @@ fn main() -> i32 {
     for p in primes {
         total += p;
     }
-    print_i32(total);
-    print_newline();
+
+    print(&total, .I32);
+    putchar(10);
     return 0;
 }
 ```
@@ -168,7 +179,7 @@ $ ./foriter
 use "std/io.cnd";
 
 fn main() -> i32 {
-    let code = 3;
+    let code = 2;
     switch code {
         0 => println("zero");
         1..3 => println("small");

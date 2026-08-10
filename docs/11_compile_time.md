@@ -12,10 +12,16 @@ const SPEED_OF_LIGHT = 299_792_458;
 const TIMEOUT_MS: u32 = 1000;
 
 fn main() -> i32 {
-    print_i32(SPEED_OF_LIGHT);
-    print(" ");
-    print_u32(TIMEOUT_MS);
-    print_newline();
+    let c = SPEED_OF_LIGHT;
+    print(&c, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let t: i32 = TIMEOUT_MS as i32;
+    print(&t, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -71,12 +77,21 @@ struct Record {
 static_assert(offsetof(Record, payload) == 8);
 
 fn main() -> i32 {
-    print_u64(sizeof(Record) as u64);
-    print(" ");
-    print_u64(alignof(Record) as u64);
-    print(" ");
-    print_u64(offsetof(Record, payload) as u64);
-    print_newline();
+    let sz: u64 = sizeof(Record) as u64;
+    print(&sz, .U64);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let al: u64 = alignof(Record) as u64;
+    print(&al, .U64);
+
+    print(&sp, .S);
+
+    let off: u64 = offsetof(Record, payload) as u64;
+    print(&off, .U64);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -97,8 +112,11 @@ const BUFFER_CAP = 64;
 
 fn main() -> i32 {
     let buf: [BUFFER_CAP]u8 = [0; BUFFER_CAP];
-    print_u64(sizeof([BUFFER_CAP]u8) as u64);
-    print_newline();
+
+    let sz: u64 = sizeof([BUFFER_CAP]u8) as u64;
+    print(&sz, .U64);
+    putchar(10);
+
     return 0;
 }
 ```

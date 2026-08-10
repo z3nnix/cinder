@@ -27,14 +27,25 @@ fn main() -> i32 {
     let e = 0o755;       // octal, i32 = 493
     let f = 1_000_000;   // 1000000
     let g = 255u8;       // fits: u8
-    print_i32(a + c);
-    print_newline();
-    print_u32(b);
-    print(" ");
-    print_i32(d + e + f);
-    print_newline();
-    print_u32(g as u32);
-    print_newline();
+
+    let v1 = a + c;
+    print(&v1, .I32);
+    putchar(10);
+
+    let v2 = b as i32;
+    print(&v2, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let v3 = d + e + f;
+    print(&v3, .I32);
+    putchar(10);
+
+    let v4 = g as i32;
+    print(&v4, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -42,7 +53,7 @@ fn main() -> i32 {
 ```text
 $ ./ints
 297
-42 1000003
+42 1000503
 255
 ```
 
@@ -59,9 +70,14 @@ use "std/io.cnd";
 fn main() -> i32 {
     let a = 3.14;        // f64
     let b = 3.14f32;     // f32
-    print("pi ~= ");
-    print_u32(a as u32);
-    print_newline();
+
+    let label: []u8 = "pi ~= ";
+    print(&label, .S);
+
+    let n: i32 = a as i32;
+    print(&n, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -105,12 +121,21 @@ fn main() -> i32 {
     let letter = 'A';        // 65
     let esc = '\x1b';        // 27, the ESC byte
     let nl = '\n';           // 10, newline
-    print_u32(letter as u32);
-    print(" ");
-    print_u32(esc as u32);
-    print(" ");
-    print_u32(nl as u32);
-    print_newline();
+
+    let sp: []u8 = " ";
+
+    let v1 = letter as i32;
+    print(&v1, .I32);
+    print(&sp, .S);
+
+    let v2 = esc as i32;
+    print(&v2, .I32);
+    print(&sp, .S);
+
+    let v3 = nl as i32;
+    print(&v3, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -138,10 +163,21 @@ fn main() -> i32 {
     let s = "Hello\nWorld";        // []u8, real newline inside
     let raw = r"C:\temp";          // []u8, backslashes kept
     let cstr = c"nul-terminated";  // *u8
+
     println(s);
     println(raw);
-    print_cstr(cstr);
-    print_newline();
+
+    let mut i: usize = 0;
+    unsafe {
+        loop {
+            let ch = cstr[i];
+            if ch == 0 { break; }
+            putchar(ch as i32);
+            i += 1;
+        }
+    }
+    putchar(10);
+
     return 0;
 }
 ```
@@ -161,13 +197,22 @@ use "std/io.cnd";
 
 fn main() -> i32 {
     let s = "abc";
-    print_u32(s[1] as u32);   // 98 = 'b'
-    print_newline();
+    let sp: []u8 = " ";
+    let mut first = true;
+
+    let first_byte: i32 = s[1] as i32;   // 98 = 'b'
+    print(&first_byte, .I32);
+    putchar(10);
+
     for b in s {
-        print_u32(b as u32);
-        print(" ");
+        if !first { print(&sp, .S); }
+        first = false;
+
+        let v: i32 = b as i32;
+        print(&v, .I32);
     }
-    print_newline();
+    putchar(10);
+
     return 0;
 }
 ```

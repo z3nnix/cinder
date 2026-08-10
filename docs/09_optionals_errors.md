@@ -44,8 +44,8 @@ use "std/io.cnd";
 
 fn show(v: ?i32) -> i32 {
     let x = v else { return 0; };
-    print_i32(x);
-    print_newline();
+    print(&x, .I32);
+    putchar(10);
     return 1;
 }
 
@@ -84,8 +84,8 @@ fn main() -> i32 {
         println("error");
         return 1;
     };
-    print_i32(r);
-    print_newline();
+    print(&r, .I32);
+    putchar(10);
 
     let bad = safe_div(1, 0) else {
         println("division by zero");
@@ -126,8 +126,8 @@ fn half(a: i32) !i32 {
 
 fn main() -> i32 {
     let h = half(10) else { return 1; };
-    print_i32(h);
-    print_newline();
+    print(&h, .I32);
+    putchar(10);
 
     let bad = half(-4) else { println("error propagated"); return 0; };
     return 2;   // unreachable
@@ -151,8 +151,8 @@ use "std/core/str.cnd";
 
 fn main() -> i32 {
     let n = str_parse_i64("1234") else { return 1; };
-    print_i64(n);
-    print_newline();
+    print(&n, .I64);
+    putchar(10);
     return 0;
 }
 ```

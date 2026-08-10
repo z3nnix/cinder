@@ -9,8 +9,9 @@ use "std/io.cnd";
 extern fn abs(n: i32) -> i32;
 
 fn main() -> i32 {
-    print_i32(abs(-42));
-    print_newline();
+    let v = abs(-42);
+    print(&v, .I32);
+    putchar(10);
     return 0;
 }
 ```
@@ -36,8 +37,10 @@ extern fn my_strlen(s: *u8) -> usize;
 
 fn main() -> i32 {
     let msg = c"hello, libc!";
-    print_u64(my_strlen(msg) as u64);
-    print_newline();
+
+    let len: u64 = my_strlen(msg) as u64;
+    print(&len, .U64);
+    putchar(10);
     return 0;
 }
 ```
@@ -65,9 +68,10 @@ fn main() -> i32 {
         p[1] = 66;
         p[2] = 67;
         p[3] = 0;
-        print(p[..3]);
+        let slice = p[..3];
+        print(&slice, .S);
     }
-    print_newline();
+    putchar(10);
     free(p);
     return 0;
 }

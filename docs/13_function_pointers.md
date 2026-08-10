@@ -15,10 +15,17 @@ fn apply(f: fn(i32) -> i32, v: i32) -> i32 {
 
 fn main() -> i32 {
     let f: fn(i32) -> i32 = double;
-    print_i32(apply(f, 5));
-    print(" ");
-    print_i32(apply(triple, 5));
-    print_newline();
+
+    let d = apply(f, 5);
+    print(&d, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let t = apply(triple, 5);
+    print(&t, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -39,15 +46,19 @@ extern signatures.
 use "std/io.cnd";
 
 fn on_key(key: u8) {
-    print_u32(key);
-    print(" ");
+    let v: i32 = key as i32;
+    print(&v, .I32);
 }
 
 fn main() -> i32 {
     let handler: fn(u8) = on_key;
     handler('a' as u8);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
     handler('b' as u8);
-    print_newline();
+    putchar(10);
     return 0;
 }
 ```

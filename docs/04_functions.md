@@ -17,8 +17,10 @@ fn describe(n: i32) -> []u8 {
 }
 
 fn main() -> i32 {
-    print_i32(add(2, 3));
-    print_newline();
+    let v = add(2, 3);
+    print(&v, .I32);
+    putchar(10);
+
     println(describe(5));
     println(describe(-1));
     return 0;
@@ -51,9 +53,12 @@ A function without a return type returns nothing.
 use "std/io.cnd";
 
 fn announce(tag: []u8) {
-    print("[");
-    print(tag);
-    print("] ");
+    let open: []u8 = "[";
+    print(&open, .S);
+    print(&tag, .S);
+
+    let close: []u8 = "] ";
+    print(&close, .S);
     println("running");
 }
 
@@ -116,9 +121,13 @@ fn main() -> i32 {
     let secret: u32 = 42;
     unsafe {
         let got = peek(&secret);
-        print("peek = ");
-        print_u32(got);
-        print_newline();
+
+        let label: []u8 = "peek = ";
+        print(&label, .S);
+
+        let v: i32 = got as i32;
+        print(&v, .I32);
+        putchar(10);
     }
     return 0;
 }
@@ -127,9 +136,4 @@ fn main() -> i32 {
 ```text
 $ ./unsafe_fn
 peek = 42
-```
-
-```text
-$ ./unsafe_fn
-read = 42
 ```

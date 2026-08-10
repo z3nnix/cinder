@@ -11,12 +11,13 @@ fn main() -> i32 {
     let name = "cinder"; // []u8 (a string)
     let pi = 3.14;       // f64
 
+    print(&x, .I32);
+    putchar(10);
+
     println(name);
-    print_i32(x);
-    print_newline();
-    print("pi = ");
-    print_u64(pi as u64);
-    print_newline();
+
+    print(&pi, .F64);
+
     return 0;
 }
 ```
@@ -24,9 +25,9 @@ fn main() -> i32 {
 ```text
 $ ./cinder build vars.cnd --emit=bin -o vars
 $ ./vars
-cinder
 42
-pi = 3
+cinder
+3.14
 ```
 
 ## Type annotations
@@ -51,8 +52,9 @@ fn main() -> i32 {
     let mut counter = 0;
     counter += 1;
     counter += 2;
-    print_i32(counter);
-    print_newline();
+
+    print(&counter, .I32);
+    putchar(10);
 
     // let nope = 1;
     // nope = 2;  // error: nope is not mutable
@@ -75,11 +77,15 @@ use "std/io.cnd";
 
 fn main() -> i32 {
     let x = 1;
-    print_i32(x);
-    print(" ");
+    print(&x, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
     let x = x + 10;
-    print_i32(x);
-    print_newline();
+    print(&x, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -101,10 +107,14 @@ const MAX_ITEMS: u32 = 64;
 const BLOCK_SIZE = 4096;
 
 fn main() -> i32 {
-    print_u32(MAX_ITEMS);
-    print_newline();
-    print_u32(BLOCK_SIZE);
-    print_newline();
+    let max_items: i32 = MAX_ITEMS as i32;
+    print(&max_items, .I32);
+    putchar(10);
+
+    let block_size: i32 = BLOCK_SIZE;
+    print(&block_size, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -132,8 +142,11 @@ fn main() -> i32 {
     ping();
     ping();
     ping();
-    print_u32(CALLS);
-    print_newline();
+
+    let calls: i32 = CALLS as i32;
+    print(&calls, .I32);
+    putchar(10);
+
     return 0;
 }
 ```

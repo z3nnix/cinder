@@ -12,10 +12,17 @@ use "std/io.cnd";
 
 fn main() -> i32 {
     println("hello");
-    print_i32(42);
-    print(" ");
-    print_hex_u64(0x2a as u64);
-    print_newline();
+
+    let n = 42;
+    print(&n, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let big: u64 = 7;
+    print(&big, .U64);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -23,17 +30,19 @@ fn main() -> i32 {
 ```text
 $ ./io
 hello
-42 2a
+42 7
 ```
 
 | Function | Writes |
 |----------|--------|
-| `print(s)` / `println(s)` | string, optional newline |
-| `print_i32/n/u32/u64/i64/u128/i128` | decimal integer |
-| `print_hex_u8/u32/u64` | lowercase hex |
-| `print_cstr(p)` | C string (null-terminated) |
+| `print(&x, .Tag)` | one value, selected by tag |
+| `println(s)` | string plus newline |
+| `putchar(c)` | one byte |
 | `print_err(s)` / `println_err(s)` | stderr |
 | `read_byte() -> ?u8` | one byte from stdin, `none` on EOF |
+
+The print tags are `I32`, `I64`, `I128`, `U8`, `U64`, `U128`, `F64`,
+`Bool`, `S` (a `[]u8` string), and `Ptr`.
 
 ## Vec
 
@@ -54,8 +63,11 @@ fn main() -> i32 {
         let b = vec_get(&v, i) else { return 2; };
         total += b;
     }
-    print_u32(total);
-    print_newline();
+
+    let out: i32 = total as i32;
+    print(&out, .I32);
+    putchar(10);
+
     vec_deinit(&v);
     return 0;
 }
@@ -140,9 +152,10 @@ fn main() -> i32 {
         p[1] = 66;
         p[2] = 67;
         p[3] = 0;
-        print(p[..3]);
+        let slice = p[..3];
+        print(&slice, .S);
     }
-    print_newline();
+    putchar(10);
     dealloc(p);
     return 0;
 }

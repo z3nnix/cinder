@@ -16,8 +16,9 @@ fn main() -> i32 {
     unsafe {
         *p += 10;
     }
-    print_i32(x);
-    print_newline();
+
+    print(&x, .I32);
+    putchar(10);
     return 0;
 }
 ```
@@ -46,10 +47,15 @@ fn main() -> i32 {
     let mut x = 1;
     let mut y = 2;
     swap(&x, &y);
-    print_i32(x);
-    print(" ");
-    print_i32(y);
-    print_newline();
+
+    print(&x, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    print(&y, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -71,9 +77,11 @@ fn main() -> i32 {
     let p = s.ptr;
     unsafe {
         let first = *p;
-        print_i32(first as i32);
+
+        let v: i32 = first as i32;
+        print(&v, .I32);
     }
-    print_newline();
+    putchar(10);
     return 0;
 }
 ```
@@ -127,9 +135,11 @@ fn main() -> i32 {
     let opaque: *void = &n;
     unsafe {
         let back: *u64 = opaque as *u64;
-        print_u64(*back);
+
+        let v = *back;
+        print(&v, .U64);
     }
-    print_newline();
+    putchar(10);
     return 0;
 }
 ```
@@ -150,10 +160,15 @@ fn main() -> i32 {
     let arr = [10, 20, 30];
     let base = arr[..].ptr;   // convert the array to a slice, take its ptr
     unsafe {
-        print_i32(*base);
-        print(" ");
-        print_i32(*(base + 1));
-        print_newline();
+        let v1 = *base;
+        print(&v1, .I32);
+
+        let sp: []u8 = " ";
+        print(&sp, .S);
+
+        let v2 = *(base + 1);
+        print(&v2, .I32);
+        putchar(10);
     }
     return 0;
 }
@@ -179,8 +194,11 @@ unsafe fn read_u32(p: *u32) -> u32 {
 fn main() -> i32 {
     let v: u32 = 7;
     unsafe {
-        print_u32(read_u32(&v));
-        print_newline();
+        let got = read_u32(&v);
+
+        let out: i32 = got as i32;
+        print(&out, .I32);
+        putchar(10);
     }
     return 0;
 }

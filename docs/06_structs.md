@@ -12,10 +12,17 @@ struct Point {
 
 fn main() -> i32 {
     let p = Point { x: 3, y: 4 };
-    print_i32(p.x);
-    print(", ");
-    print_i32(p.y);
-    print_newline();
+
+    let x = p.x;
+    print(&x, .I32);
+
+    let sep: []u8 = ", ";
+    print(&sep, .S);
+
+    let y = p.y;
+    print(&y, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -42,8 +49,9 @@ fn main() -> i32 {
     let mut c = Counter { value: 0, step: 2 };
     c.value += c.step;
     c.value += c.step;
-    print_i32(c.value);
-    print_newline();
+
+    print(&c.value, .I32);
+    putchar(10);
     return 0;
 }
 ```
@@ -77,11 +85,17 @@ fn grow(r: *Rect, k: i32) {
 
 fn main() -> i32 {
     let mut box = Rect { w: 3, h: 4 };
-    print_i32(area(&box));
-    print_newline();
+
+    let a1 = area(&box);
+    print(&a1, .I32);
+    putchar(10);
+
     grow(&box, 2);
-    print_i32(area(&box));
-    print_newline();
+
+    let a2 = area(&box);
+    print(&a2, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -113,10 +127,16 @@ static_assert(offsetof(Pair, a) == 0);
 static_assert(offsetof(Pair, b) == 4);
 
 fn main() -> i32 {
-    print_u64(sizeof(Pair) as u64);
-    print(" ");
-    print_u64(offsetof(Pair, b) as u64);
-    print_newline();
+    let sz: u64 = sizeof(Pair) as u64;
+    print(&sz, .U64);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let off: u64 = offsetof(Pair, b) as u64;
+    print(&off, .U64);
+    putchar(10);
+
     return 0;
 }
 ```

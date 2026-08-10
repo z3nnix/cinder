@@ -45,10 +45,17 @@ fn main() -> i32 {
     let mut q = q_init();
     q_push(&q, 7);
     q_push(&q, 9);
-    print_i32(q_pop(&q) as i32);
-    print(" ");
-    print_i32(q_pop(&q) as i32);
-    print_newline();
+
+    let a: i32 = q_pop(&q) as i32;
+    print(&a, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let b: i32 = q_pop(&q) as i32;
+    print(&b, .I32);
+    putchar(10);
+
     return 0;
 }
 ```

@@ -77,8 +77,8 @@ fn early() -> i32 {
 
 fn main() -> i32 {
     let v = early();
-    print_i32(v);
-    print_newline();
+    print(&v, .I32);
+    putchar(10);
     return 0;
 }
 ```

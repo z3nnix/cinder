@@ -13,10 +13,17 @@ use "std/io.cnd";
 fn main() -> i32 {
     let primes: [4]i32 = [2, 3, 5, 7];
     let zeroes = [0; 8];        // repeat literal: eight zeroes
-    print_i32(primes[2]);
-    print(" ");
-    print_i32(zeroes[4]);
-    print_newline();
+
+    let v1 = primes[2];
+    print(&v1, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let v2 = zeroes[4];
+    print(&v2, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -52,10 +59,17 @@ use "std/io.cnd";
 fn main() -> i32 {
     let arr = [10, 20, 30, 40, 50];
     let s = arr[1..4];          // [20, 30, 40]
-    print_i32(s.len as i32);
-    print(" ");
-    print_i32(s[0]);
-    print_newline();
+
+    let len: i32 = s.len as i32;
+    print(&len, .I32);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let first = s[0];
+    print(&first, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -80,10 +94,15 @@ fn total(vals: []i32) -> i32 {
 
 fn main() -> i32 {
     let nums = [1, 2, 3, 4];
-    print_i32(total(nums[..]));   // [..] converts the array to a slice
-    print_newline();
-    print_i32(total(nums[1..3]));
-    print_newline();
+
+    let t1 = total(nums[..]);   // [..] converts the array to a slice
+    print(&t1, .I32);
+    putchar(10);
+
+    let t2 = total(nums[1..3]);
+    print(&t2, .I32);
+    putchar(10);
+
     return 0;
 }
 ```
@@ -103,10 +122,17 @@ use "std/io.cnd";
 
 fn main() -> i32 {
     let s = "hello";
-    print_u64(s.len as u64);
-    print(" ");
-    print_u32(s[0] as u32);
-    print_newline();
+
+    let len: u64 = s.len as u64;
+    print(&len, .U64);
+
+    let sp: []u8 = " ";
+    print(&sp, .S);
+
+    let first: i32 = s[0] as i32;
+    print(&first, .I32);
+    putchar(10);
+
     return 0;
 }
 ```

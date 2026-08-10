@@ -34,9 +34,9 @@ export enum PrintType {
 }
 
 /// Usage:
-///     println(&n, .I32);    // n: i32
-///     println(&s, .S);      // s: []u8
-///     println(&b, .Bool);   // b: bool
+///     print(&n, .I32);      // n: i32
+///     print(&s, .S);        // s: []u8
+///     print(&b, .Bool);     // b: bool
 /// For Ptr, value is the pointer itself.
 export fn print(value: *void, tag: PrintType) {
     switch tag {
@@ -73,6 +73,11 @@ export fn print(value: *void, tag: PrintType) {
         PrintType.U8 => {
             unsafe {
                 putchar(*(value as *i32));
+            }
+        }
+        PrintType.U64 => {
+            unsafe {
+                print_u64(*(value as *u64));
             }
         }
         PrintType.U128 => {

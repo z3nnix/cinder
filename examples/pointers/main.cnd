@@ -19,34 +19,43 @@ fn main() -> i32 {
     let mut x = 5;
     let mut y = 20;
 
-    print("before: x = ");
-    print_i32(x);
-    print(", y = ");
-    print_i32(y);
-    print_newline();
+    let lbl_before: []u8 = "before: x = ";
+    print(&lbl_before, .S);
+    print(&x, .I32);
+    let lbl_comma: []u8 = ", y = ";
+    print(&lbl_comma, .S);
+    print(&y, .I32);
+    putchar(10);
 
     swap(&x, &y);
-    print("after:  x = ");
-    print_i32(x);
-    print(", y = ");
-    print_i32(y);
-    print_newline();
+    let lbl_after: []u8 = "after:  x = ";
+    print(&lbl_after, .S);
+    print(&x, .I32);
+    let lbl_comma2: []u8 = ", y = ";
+    print(&lbl_comma2, .S);
+    print(&y, .I32);
+    putchar(10);
 
     bump(&x);
-    print("bump(x): x = ");
-    print_i32(x);
-    print_newline();
+    let lbl_bump: []u8 = "bump(x): x = ";
+    print(&lbl_bump, .S);
+    print(&x, .I32);
+    putchar(10);
 
     let s = "hello";
     let p = s.ptr;
     unsafe {
         let first = *p;
-        print("first byte of \"hello\" = ");
-        print_i32(first as i32);
-        print_newline();
+        let lbl_first: []u8 = "first byte of \"hello\" = ";
+        print(&lbl_first, .S);
+        let first_i32: i32 = first as i32;
+        print(&first_i32, .I32);
+        putchar(10);
     }
-    print("len(\"hello\") = ");
-    print_u32(s.len as u32);
-    print_newline();
+    let lbl_len: []u8 = "len(\"hello\") = ";
+    print(&lbl_len, .S);
+    let len_i32: i32 = s.len as i32;
+    print(&len_i32, .I32);
+    putchar(10);
     return 0;
 }

@@ -10,11 +10,15 @@ fn fib(n: u64) -> u64 {
 fn main() -> i32 {
     println("Fibonacci numbers:");
     for i in 0..=15 {
-        print("fib(");
-        print_u64(i as u64);
-        print(") = ");
-        print_u64(fib(i as u64));
-        print_newline();
+        let label: []u8 = "fib(";
+        print(&label, .S);
+        let idx: i32 = i;
+        print(&idx, .I32);
+        let sep: []u8 = ") = ";
+        print(&sep, .S);
+        let value: u64 = fib(i as u64);
+        print(&value, .U64);
+        putchar(10);
     }
     return 0;
 }

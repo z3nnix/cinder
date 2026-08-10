@@ -60,13 +60,29 @@ fn print_hex16(v: u16) {
 
 fn print_status(c: *Chip8, frame: u32) {
     putchar(10);
-    print("pc=0x"); print_hex16(c.pc);
-    print("  i=0x"); print_hex16(c.i_reg);
-    print("  dt="); print_u32(c.dt as u32);
-    print("  sp="); print_u32(c.sp as u32);
-    print("  frames="); print_u32(frame);
-    print("  cycles="); print_u32(c.cycles);
-    print_newline();
+    let lbl_pc: []u8 = "pc=0x";
+    print(&lbl_pc, .S);
+    print_hex16(c.pc);
+    let lbl_i: []u8 = "  i=0x";
+    print(&lbl_i, .S);
+    print_hex16(c.i_reg);
+    let lbl_dt: []u8 = "  dt=";
+    print(&lbl_dt, .S);
+    let dt: i32 = c.dt as i32;
+    print(&dt, .I32);
+    let lbl_sp: []u8 = "  sp=";
+    print(&lbl_sp, .S);
+    let sp: i32 = c.sp as i32;
+    print(&sp, .I32);
+    let lbl_frames: []u8 = "  frames=";
+    print(&lbl_frames, .S);
+    let f: i32 = frame as i32;
+    print(&f, .I32);
+    let lbl_cycles: []u8 = "  cycles=";
+    print(&lbl_cycles, .S);
+    let cy: i32 = c.cycles as i32;
+    print(&cy, .I32);
+    putchar(10);
 }
 
 fn run() -> i32 {
@@ -89,11 +105,16 @@ fn run() -> i32 {
     }
 
     putchar(10);
-    print("CHIP-8 demo finished: ");
-    print_u32(frame);
-    print(" frames, ");
-    print_u32(c.cycles);
-    print(" instructions executed, exit ok\n");
+    let lbl_fin: []u8 = "CHIP-8 demo finished: ";
+    print(&lbl_fin, .S);
+    let f: i32 = frame as i32;
+    print(&f, .I32);
+    let lbl_frames: []u8 = " frames, ";
+    print(&lbl_frames, .S);
+    let cy: i32 = c.cycles as i32;
+    print(&cy, .I32);
+    let lbl_done: []u8 = " instructions executed, exit ok\n";
+    print(&lbl_done, .S);
 
     chip8_free(&c);
     return 0;

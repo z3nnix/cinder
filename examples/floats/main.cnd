@@ -8,20 +8,34 @@ fn main() -> i32 {
     let a = 3.5;
     let b = 2.25;
 
-    print("3.5 + 2.25 = ");
-    print_i32((a + b) as i32);
-    print_newline();
-    print("3.5 * 2.25 = ");
-    print_i32((a * b) as i32);
-    print_newline();
-    print("pow(2, 10)  = ");
-    print_i32(pow(2.0, 10.0) as i32);
-    print_newline();
-    print("floor(2.25) = ");
-    print_i32(floor(b) as i32);
-    print_newline();
-    print("sqrt(144)   = ");
-    print_i32(sqrt(144.0) as i32);
-    print_newline();
+    let lbl1: []u8 = "3.5 + 2.25 = ";
+    print(&lbl1, .S);
+    let v1: i32 = (a + b) as i32;
+    print(&v1, .I32);
+    putchar(10);
+
+    let lbl2: []u8 = "3.5 * 2.25 = ";
+    print(&lbl2, .S);
+    let v2: i32 = (a * b) as i32;
+    print(&v2, .I32);
+    putchar(10);
+
+    let lbl3: []u8 = "pow(2, 10)  = ";
+    print(&lbl3, .S);
+    let v3: i32 = pow(2.0, 10.0) as i32;
+    print(&v3, .I32);
+    putchar(10);
+
+    let lbl4: []u8 = "floor(2.25) = ";
+    print(&lbl4, .S);
+    let v4: i32 = floor(b) as i32;
+    print(&v4, .I32);
+    putchar(10);
+
+    let lbl5: []u8 = "sqrt(144)   = ";
+    print(&lbl5, .S);
+    let v5: i32 = sqrt(144.0) as i32;
+    print(&v5, .I32);
+    putchar(10);
     return 0;
 }

@@ -1123,10 +1123,27 @@ use "std/x86.cnd";
 
 The module `std/io.cnd` provides:
 
-- `putchar`, `print`, `println`, `print_newline`
-- `print_u32`, `print_i32`, `print_u64`, `print_i64`
-- `print_cstr`, `puts`, `strlen`, `printf`, `fflush`
+- `putchar`, `print`, `println`
+- `print_err`, `println_err`, `print_cstr_err`
+- `read_byte`, `read_line`
+- `strlen`, `printf`, `sprintf`, `puts`, `fflush`
 - `write`
+
+The function `print` is a universal printer.
+It takes a pointer to a value and a `PrintType` tag.
+The function `print` does not add a newline for numbers and strings.
+The function `putchar` writes one byte.
+
+```cinder
+let n: i32 = 42;
+let s: []u8 = "value = ";
+print(&s, .S);
+print(&n, .I32);
+putchar(10);
+```
+
+The `PrintType` tags are `I32`, `I64`, `I128`, `U8`, `U64`, `U128`, `F64`,
+`S`, `Bool`, and `Ptr`.
 
 The module `std/x86.cnd` provides port I/O:
 

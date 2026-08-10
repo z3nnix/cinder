@@ -9,8 +9,8 @@ fn main() -> i32 {
         } else if i % 5 == 0 {
             println("Buzz");
         } else {
-            print_i32(i);
-            print_newline();
+            print(&i, .I32);
+            putchar(10);
         }
     }
     return 0;

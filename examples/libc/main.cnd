@@ -6,9 +6,11 @@ extern fn abs(n: i32) -> i32;
 
 fn main() -> i32 {
     let msg = c"hello, libc!";
-    print("strlen(\"hello, libc!\") = ");
-    print_u64(strlen(msg) as u64);
-    print_newline();
+    let lbl_strlen: []u8 = "strlen(\"hello, libc!\") = ";
+    print(&lbl_strlen, .S);
+    let len: u64 = strlen(msg) as u64;
+    print(&len, .U64);
+    putchar(10);
 
     let p = malloc(64);
     unsafe {
@@ -17,13 +19,16 @@ fn main() -> i32 {
         p[2] = 67;
         p[3] = 0;
     }
-    print("malloc buffer via printf: ");
+    let lbl_malloc: []u8 = "malloc buffer via printf: ";
+    print(&lbl_malloc, .S);
     printf(c"%s\n", p);
     fflush(null);
     free(p);
 
-    print("abs(-42) = ");
-    print_i32(abs(-42));
-    print_newline();
+    let lbl_abs: []u8 = "abs(-42) = ";
+    print(&lbl_abs, .S);
+    let av: i32 = abs(-42);
+    print(&av, .I32);
+    putchar(10);
     return 0;
 }

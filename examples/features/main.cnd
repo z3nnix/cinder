@@ -37,28 +37,38 @@ fn sum(a: []i32) -> i32 {
 
 fn main() -> i32 {
     let p = Point { x: 3, y: 4 };
-    print("area of 3x4 point = ");
-    print_i32(p.x * p.y);
-    print_newline();
+    let lbl_area: []u8 = "area of 3x4 point = ";
+    print(&lbl_area, .S);
+    let area: i32 = p.x * p.y;
+    print(&area, .I32);
+    putchar(10);
 
-    print("color Red         = ");
+    let lbl_red: []u8 = "color Red         = ";
+    print(&lbl_red, .S);
     println(color_name(Color.Red));
-    print("color Green       = ");
+    let lbl_green: []u8 = "color Green       = ";
+    print(&lbl_green, .S);
     println(color_name(Color.Green));
-    print("color Blue        = ");
+    let lbl_blue: []u8 = "color Blue        = ";
+    print(&lbl_blue, .S);
     println(color_name(Color.Blue));
 
-    print("classify(0)       = ");
+    let lbl_cls0: []u8 = "classify(0)       = ";
+    print(&lbl_cls0, .S);
     println(classify(0));
-    print("classify(3)       = ");
+    let lbl_cls3: []u8 = "classify(3)       = ";
+    print(&lbl_cls3, .S);
     println(classify(3));
-    print("classify(100)     = ");
+    let lbl_cls100: []u8 = "classify(100)     = ";
+    print(&lbl_cls100, .S);
     println(classify(100));
 
     let arr = [1, 2, 3, 4, 5];
-    print("sum([1..5])       = ");
-    print_i32(sum(arr[..]));
-    print_newline();
+    let lbl_sum: []u8 = "sum([1..5])       = ";
+    print(&lbl_sum, .S);
+    let sum_val: i32 = sum(arr[..]);
+    print(&sum_val, .I32);
+    putchar(10);
 
     let mut total = 0;
     for i in 0..5 {
@@ -67,8 +77,9 @@ fn main() -> i32 {
     for i in 0..=5 {
         total -= i;
     }
-    print("range arith       = ");
-    print_i32(total);
-    print_newline();
+    let lbl_range: []u8 = "range arith       = ";
+    print(&lbl_range, .S);
+    print(&total, .I32);
+    putchar(10);
     return 0;
 }

@@ -17,13 +17,13 @@ fn double_div(a: i32, b: i32) !i32 {
 }
 
 fn try_div(label: []u8, a: i32, b: i32) -> i32 {
-    print(label);
+    print(&label, .S);
     let r = safe_div(a, b) else {
         println("error: division by zero");
         return 0;
     };
-    print_i32(r);
-    print_newline();
+    print(&r, .I32);
+    putchar(10);
     return r;
 }
 
@@ -38,15 +38,19 @@ fn main() -> i32 {
     try_div("1 / 0           = ", 1, 0);
 
     let d = double_div(10, 2) else { return 1; };
-    print("double_div(10,2) = ");
-    print_i32(d);
-    print_newline();
+    let lbl_dd: []u8 = "double_div(10,2) = ";
+    print(&lbl_dd, .S);
+    print(&d, .I32);
+    putchar(10);
 
-    print("describe(42)    = ");
+    let lbl_d42: []u8 = "describe(42)    = ";
+    print(&lbl_d42, .S);
     println(describe(42));
-    print("describe(7)     = ");
+    let lbl_d7: []u8 = "describe(7)     = ";
+    print(&lbl_d7, .S);
     println(describe(7));
-    print("describe(none)  = ");
+    let lbl_dn: []u8 = "describe(none)  = ";
+    print(&lbl_dn, .S);
     println(describe(none));
     return 0;
 }

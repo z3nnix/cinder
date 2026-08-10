@@ -1,4 +1,5 @@
 use "std/io.cnd";
+use "std/alloc.cnd";
 
 fn use_resource() {
     let ptr = alloc(1024);

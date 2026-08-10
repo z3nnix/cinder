@@ -29,7 +29,6 @@ Hello, world!
 The return value of `main` becomes the exit code of the program.
 
 ```rust
-// docs: check
 fn main() -> i32 {
     return 3;
 }

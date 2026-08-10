@@ -5,6 +5,7 @@ extern fn write(fd: i32, buf: *u8, count: usize) -> isize;
 extern fn read(fd: i32, buf: *u8, count: usize) -> isize;
 export extern fn strlen(s: *u8) -> usize;
 export extern fn printf(fmt: *u8, ...) -> i32;
+export extern fn sprintf(buf: *u8, fmt: *u8, ...) -> i32;
 export extern fn puts(s: *u8) -> i32;
 export extern fn fflush(stream: *u8) -> i32;
 
@@ -14,29 +15,94 @@ export fn putchar(c: i32) -> i32 {
     return 0;
 }
 
-export fn print(s: []u8) {
-    write(1, s.ptr, s.len);
-}
-
 export fn println(s: []u8) {
-    print(s);
+    write(1, s.ptr, s.len);
     putchar(10);
 }
 
-export fn print_cstr(s: *u8) {
+export enum PrintType {
+    I32;    // int    32b
+    I64;    // int    64b
+    I128;   // int    128b
+    F64;    // float  64b
+    S;      // string ( []u8 )
+    Bool;   // boolean
+    U8;     // 8b   unsigned int
+    U64;    // 64b  unsigned int
+    U128;   // 128b unsigned int
+    Ptr;    // pointer
+}
+
+/// Usage:
+///     println(&n, .I32);    // n: i32
+///     println(&s, .S);      // s: []u8
+///     println(&b, .Bool);   // b: bool
+/// For Ptr, value is the pointer itself.
+export fn print(value: *void, tag: PrintType) {
+    switch tag {
+        PrintType.S => {
+            unsafe {
+                print_str(value as *[]u8);
+            }
+        }
+        PrintType.I32 => {
+            unsafe {
+                print_i32(*(value as *i32));
+            }
+        }
+       PrintType.I64 => {
+            unsafe {
+                print_i64(*(value as *i64));
+            }
+        }
+        PrintType.I128 => {
+            unsafe {
+                print_i128(*(value as *i128));
+            }
+        }
+        PrintType.F64 => {
+            unsafe {
+                print_f64(*(value as *f64));
+            }
+        }
+        PrintType.Bool => {
+            unsafe {
+                print_bool(*(value as *bool));
+            }
+        }
+        PrintType.U8 => {
+            unsafe {
+                putchar(*(value as *i32));
+            }
+        }
+        PrintType.U128 => {
+            unsafe {
+                print_u128(*(value as *u128));
+            }
+        }
+
+        PrintType.Ptr => print_ptr(value);
+    }
+}
+
+/// Write the slice pointed to by s.
+fn print_str(s: *[]u8) {
+    unsafe {
+        let slice: []u8 = *s;
+        write(1, slice.ptr, slice.len);
+    }
+}
+
+fn print_cstr(s: *u8) {
     write(1, s, strlen(s));
 }
 
-export fn print_newline() {
-    putchar(10);
-}
-
-export fn print_u32(n: u32) {
+fn print_u32(n: u32) {
     if n >= 10 { print_u32(n / 10); }
     putchar(48 + (n % 10) as i32);
 }
 
-export fn print_i32(n: i32) {
+fn print_i32(n: i32) {
     if n < 0 {
         putchar(45);
         print_u32((-n) as u32);
@@ -45,12 +111,12 @@ export fn print_i32(n: i32) {
     }
 }
 
-export fn print_u64(n: u64) {
+fn print_u64(n: u64) {
     if n >= 10 { print_u64(n / 10); }
     putchar(48 + (n % 10) as i32);
 }
 
-export fn print_i64(n: i64) {
+fn print_i64(n: i64) {
     if n < 0 {
         putchar(45);
         print_u64((-n) as u64);
@@ -60,13 +126,13 @@ export fn print_i64(n: i64) {
 }
 
 /// Print n as a decimal number.
-export fn print_u128(n: u128) {
+fn print_u128(n: u128) {
     if n >= 10 { print_u128(n / 10); }
     putchar(48 + (n % 10) as i32);
 }
 
 /// Print n as a signed decimal number.
-export fn print_i128(n: i128) {
+fn print_i128(n: i128) {
     if n < 0 {
         putchar(45);
         print_u128((0 - n) as u128);
@@ -75,22 +141,33 @@ export fn print_i128(n: i128) {
     }
 }
 
-/// Print n as lowercase hexadecimal.
-export fn print_hex_u8(n: u8) {
-    if n >= 16 { print_hex_u8(n / 16); }
-    let d = (n % 16) as i32;
-    if d < 10 { putchar(48 + d); } else { putchar(87 + d); }
+/// Print b as `true` or `false`.
+fn print_bool(b: bool) {
+    if b {
+        println("true");
+    } else {
+        println("false");
+    }
 }
 
-/// Print n as lowercase hexadecimal.
-export fn print_hex_u32(n: u32) {
-    if n >= 16 { print_hex_u32(n / 16); }
-    let d = (n % 16) as i32;
-    if d < 10 { putchar(48 + d); } else { putchar(87 + d); }
+/// Print f as a decimal number.
+fn print_f64(f: f64) {
+    let buf: [32]u8 = [0; 32];
+    let n = sprintf(buf[..].ptr, c"%g", f) as usize;
+    println(buf[..n]);
 }
 
+/// Print p as `0x` plus lowercase hexadecimal.
+fn print_ptr(p: *void) {
+    println("0x");
+    unsafe {
+        print_hex_u64(p as u64);
+    }
+}
+
+
 /// Print n as lowercase hexadecimal.
-export fn print_hex_u64(n: u64) {
+fn print_hex_u64(n: u64) {
     if n >= 16 { print_hex_u64(n / 16); }
     let d = (n % 16) as i32;
     if d < 10 { putchar(48 + d); } else { putchar(87 + d); }

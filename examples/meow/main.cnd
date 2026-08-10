@@ -1,11 +1,8 @@
 use "std/io.cnd";
 
-extern fn malloc(size: usize) -> *u8;
-extern fn free(p: *u8);
-
 fn use_resource() {
-    let ptr = malloc(1024);
-    defer free(ptr);  
+    let ptr = alloc(1024);
+    defer dealloc(ptr);  
     
     unsafe {
         ptr[0] = 42; 

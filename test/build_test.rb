@@ -72,7 +72,7 @@ class BuildTest < Minitest::Test
   def test_stdlib_use_default_include_dir
     skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
     file = File.join(@tmp, "hello.cnd")
-    File.write(file, "use \"std/io.cnd\";\nfn main() -> i32 { println(\"hi\"); print_u32(5); print_newline(); return 0; }\n")
+    File.write(file, "use \"std/io.cnd\";\nfn main() -> i32 { println(\"hi\"); let n: i32 = 5; print(&n, .I32); putchar(10); return 0; }\n")
     bin = File.join(@tmp, "prog")
     out, err, st = run_cli("build", file, "--emit=bin", "-o", bin)
     assert_equal 0, st.exitstatus, err

@@ -422,16 +422,19 @@ class StdTest < Minitest::Test
 
       fn main() -> i32 {
           println("io a");
-          print_u128(340282366920938463463374607431768211455);
+          let u: u128 = 340282366920938463463374607431768211455;
+          print(&u, .U128);
           putchar(10);
-          print_i128(-42);
+          let i: i128 = -42;
+          print(&i, .I128);
           putchar(10);
-          print_hex_u64(0xdeadbeef);
+          let u64v: u64 = 18446744073709551615;
+          print(&u64v, .U64);
           putchar(10);
-          print_hex_u32(0xff);
-          putchar(10);
-          print_hex_u8(15);
-          putchar(10);
+          let f: f64 = 2.5;
+          print(&f, .F64);
+          let b: bool = true;
+          print(&b, .Bool);
           println_err("err io");
           let mut buf: [64]u8 = [0; 64];
           let n = read_line(buf[..].ptr, 64);
@@ -445,9 +448,9 @@ class StdTest < Minitest::Test
     assert_includes out, "io a"
     assert_includes out, "340282366920938463463374607431768211455"
     assert_includes out, "-42"
-    assert_includes out, "deadbeef"
-    assert_includes out, "ff"
-    assert_includes out, "f"
+    assert_includes out, "18446744073709551615"
+    assert_includes out, "2.5"
+    assert_includes out, "true"
     assert_includes out, "io ok"
     assert_includes err_out, "err io"
   end

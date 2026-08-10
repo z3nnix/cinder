@@ -161,12 +161,15 @@ class ExternTest < Minitest::Test
     out, code = run_stdout(<<~CND)
       use "std/io.cnd";
       fn main() -> i32 {
-          print_u32(42);
-          print_newline();
-          print_i32(-7);
-          print_newline();
-          print_u64(18446744073709551615);
-          print_newline();
+          let n: i32 = 42;
+          print(&n, .I32);
+          putchar(10);
+          let m: i32 = -7;
+          print(&m, .I32);
+          putchar(10);
+          let u: u64 = 18446744073709551615;
+          print(&u, .U64);
+          putchar(10);
           return 0;
       }
     CND

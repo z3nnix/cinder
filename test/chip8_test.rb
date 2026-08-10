@@ -64,7 +64,8 @@ class Chip8Test < Minitest::Test
       use "chip8.cnd";
 
       fn fail(what: []u8) -> i32 {
-          print("chip8 test FAIL: ");
+          let label: []u8 = "chip8 test FAIL: ";
+          print(&label, .S);
           println(what);
           return 1;
       }
@@ -109,7 +110,7 @@ class Chip8Test < Minitest::Test
           if c.cycles != 14 { chip8_free(&c); return fail("cycle count wrong"); }
 
           chip8_free(&c);
-          print("chip8 test OK\\n");
+          println("chip8 test OK");
           return 0;
       }
     CND

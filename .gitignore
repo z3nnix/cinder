@@ -9,3 +9,5 @@ examples/*/main
 
 # cinder compiler binary
 dist/*
+
+docs_html

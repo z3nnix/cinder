@@ -27,6 +27,19 @@ class StdTest < Minitest::Test
     assert_includes out, marker
   end
 
+  def build_run_args(src, *args)
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    Dir.mktmpdir do |dir|
+      file = File.join(dir, "main.cnd")
+      File.write(file, src)
+      bin = File.join(dir, "prog")
+      _out, err, st = Open3.capture3(RbConfig.ruby, MAIN, "build", file, "--emit=bin", "-o", bin)
+      assert_equal 0, st.exitstatus, "build failed:\n#{err}"
+      out, _err, run_st = Open3.capture3(bin, *args)
+      [out, run_st.exitstatus]
+    end
+  end
+
   def build_run_stdin(src, input)
     skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
     Dir.mktmpdir do |dir|
@@ -453,6 +466,82 @@ class StdTest < Minitest::Test
     assert_includes out, "true"
     assert_includes out, "io ok"
     assert_includes err_out, "err io"
+  end
+
+  def test_main_args
+    out, code = build_run_args(<<~CND, "hello", "world")
+      use "std/io.cnd";
+      use "std/core/str.cnd";
+
+      fn cstr_slice(p: *u8) -> []u8 {
+          unsafe {
+              let len = strlen(p);
+              return p[..len];
+          }
+      }
+
+      fn main(argc: i32, argv: **u8) -> i32 {
+          if argc != 3 { return 1; }
+          let mut i: i32 = 0;
+          while i < argc {
+              unsafe {
+                  let s = cstr_slice(argv[i as usize]);
+                  if i == 1 { if !str_equal(s, "hello") { return 2; } }
+                  if i == 2 { if !str_equal(s, "world") { return 3; } }
+              }
+              i += 1;
+          }
+          println("args ok");
+          return 0;
+      }
+    CND
+    assert_equal 0, code, "args driver failed with exit #{code}:\n#{out}"
+    assert_includes out, "args ok"
+  end
+
+  def test_file
+    path = File.join(Dir.tmpdir, "cinder_std_file_#{Process.pid}.txt")
+    File.delete(path) if File.exist?(path)
+    out, code = build_run(<<~CND % path)
+      use "std/file.cnd";
+      use "std/io.cnd";
+      use "std/core/str.cnd";
+
+      fn main() -> i32 {
+          let p: []u8 = "%s";
+
+          if file_exists(p) { return 1; }
+          if !file_write_all(p, "hello file\\n") { return 2; }
+          if !file_exists(p) { return 3; }
+          let sz = file_size(p) else { return 4; };
+          if sz != 11 { return 5; }
+
+          let data = file_read_all(p) else { return 6; };
+          if data.len != 11 { unsafe { dealloc(data.ptr); } return 7; }
+          if !str_equal(data, "hello file\\n") { unsafe { dealloc(data.ptr); } return 8; }
+          unsafe { dealloc(data.ptr); }
+
+          if !file_remove(p) { return 9; }
+          if file_exists(p) { return 10; }
+
+          println("file ok");
+          return 0;
+      }
+    CND
+    assert_equal 0, code, "file driver failed with exit #{code}:\n#{out}"
+    assert_includes out, "file ok"
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_main_bad_signature
+    Dir.mktmpdir do |dir|
+      file = File.join(dir, "main.cnd")
+      File.write(file, "fn main(argc: u32, argv: **u8) -> i32 {\n    return argc as i32;\n}\n")
+      _out, err, st = Open3.capture3(RbConfig.ruby, MAIN, "check", file)
+      assert_equal 1, st.exitstatus, "bad signature should be rejected"
+      assert_includes err, "main signature"
+    end
   end
 
   def test_panic

@@ -166,6 +166,76 @@ $ ./alloc
 ABC
 ```
 
+## Command line arguments
+
+`main` may declare the C-style signature `main(argc: i32, argv: **u8)`
+to receive the argument count and a pointer to the argument strings.
+`argv[0]` is the program path; real arguments start at `argv[1]`.
+
+```rust
+use "std/io.cnd";
+use "std/core/str.cnd";
+
+fn cstr_slice(p: *u8) -> []u8 {
+    unsafe {
+        let len = strlen(p);
+        return p[..len];
+    }
+}
+
+fn main(argc: i32, argv: **u8) -> i32 {
+    let n: i32 = argc;
+    print(&n, .I32);
+    putchar(10);
+    for i in 1 .. argc {
+        unsafe {
+            println(cstr_slice(argv[i as usize]));
+        }
+    }
+    return 0;
+}
+```
+
+```text
+$ ./args one two
+3
+one
+two
+```
+
+## File I/O
+
+`std/file.cnd` reads and writes whole files through the C library. Paths are
+`[]u8` slices. `file_read_all` returns a heap buffer (NUL-terminated) that you
+must release with `dealloc`.
+
+```rust
+use "std/file.cnd";
+use "std/io.cnd";
+
+fn main() -> i32 {
+    let path = "/tmp/cinder_doc_file.txt";
+    if !file_write_all(path, "hello file") { return 1; }
+    let data = file_read_all(path) else { return 2; };
+    println(data);
+    unsafe { dealloc(data.ptr); }
+    return 0;
+}
+```
+
+```text
+$ ./file
+hello file
+```
+
+| Function | Behavior |
+|----------|----------|
+| `file_read_all(path) -> ?[]u8` | whole file into a heap buffer |
+| `file_write_all(path, data) -> bool` | write, truncating existing file |
+| `file_exists(path) -> bool` | can the file be opened |
+| `file_size(path) -> ?usize` | size in bytes |
+| `file_remove(path) -> bool` | delete the file |
+
 ## Port I/O and panic
 
 `std/x86.cnd` declares `outb`/`inb`/etc. for bare-metal; `std/panic.cnd`

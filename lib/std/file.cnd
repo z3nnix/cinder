@@ -1,0 +1,114 @@
+//! Cinder stdlib: file I/O (hosted).
+//! Read and write whole files through the C library.
+//! Paths are `[]u8` slices; they are copied to a NUL-terminated buffer.
+//! Buffers returned by `file_read_all` come from `alloc` and must be
+//! released with `dealloc`.
+
+use "std/core/mem.cnd";
+use "std/alloc.cnd";
+
+export extern fn fopen(path: *u8, mode: *u8) -> *void;
+export extern fn fclose(stream: *void) -> i32;
+export extern fn fseek(stream: *void, offset: i64, whence: i32) -> i32;
+export extern fn ftell(stream: *void) -> i64;
+export extern fn fread(ptr: *u8, size: usize, count: usize, stream: *void) -> usize;
+export extern fn fwrite(ptr: *u8, size: usize, count: usize, stream: *void) -> usize;
+export extern fn remove(path: *u8) -> i32;
+
+const SEEK_SET: i32 = 0;
+const SEEK_CUR: i32 = 1;
+const SEEK_END: i32 = 2;
+
+/// Copy path into a NUL-terminated heap buffer. Returns null on OOM.
+/// The caller must release the result with dealloc.
+fn path_cstr(path: []u8) -> *u8 {
+    let p = alloc(path.len + 1);
+    if p == null { return null; }
+    unsafe {
+        for i in 0 .. path.len {
+            p[i] = path[i];
+        }
+        p[path.len] = 0;
+    }
+    return p;
+}
+
+/// Read the whole file at path into a heap buffer. Returns none on failure.
+/// The returned buffer is NUL-terminated and must be released with dealloc.
+export fn file_read_all(path: []u8) -> ?[]u8 {
+    let p = path_cstr(path);
+    if p == null { return none; }
+    let f = fopen(p, c"rb");
+    dealloc(p);
+    if f == null { return none; }
+    defer fclose(f);
+
+    if fseek(f, 0, SEEK_END) != 0 { return none; }
+    let end = ftell(f);
+    if end < 0 { return none; }
+    if fseek(f, 0, SEEK_SET) != 0 { return none; }
+
+    let n = end as usize;
+    let buf = alloc(n + 1);
+    if buf == null { return none; }
+    if n > 0 {
+        if fread(buf, 1, n, f) != n {
+            dealloc(buf);
+            return none;
+        }
+    }
+    unsafe {
+        buf[n] = 0;
+        return buf[..n];
+    }
+}
+
+/// Write data to path, truncating any existing file. Returns false on failure.
+export fn file_write_all(path: []u8, data: []u8) -> bool {
+    let p = path_cstr(path);
+    if p == null { return false; }
+    let f = fopen(p, c"wb");
+    dealloc(p);
+    if f == null { return false; }
+    defer fclose(f);
+
+    if data.len > 0 {
+        if fwrite(data.ptr, 1, data.len, f) != data.len { return false; }
+    }
+    return true;
+}
+
+/// Return true when a regular file can be opened at path.
+export fn file_exists(path: []u8) -> bool {
+    let p = path_cstr(path);
+    if p == null { return false; }
+    let f = fopen(p, c"rb");
+    dealloc(p);
+    if f == null { return false; }
+    fclose(f);
+    return true;
+}
+
+/// Return the size of the file at path in bytes, or none on failure.
+export fn file_size(path: []u8) -> ?usize {
+    let p = path_cstr(path);
+    if p == null { return none; }
+    let f = fopen(p, c"rb");
+    dealloc(p);
+    if f == null { return none; }
+    defer fclose(f);
+
+    if fseek(f, 0, SEEK_END) != 0 { return none; }
+    let end = ftell(f);
+    if end < 0 { return none; }
+    return end as usize;
+}
+
+/// Delete the file at path. Returns true on success.
+export fn file_remove(path: []u8) -> bool {
+    let p = path_cstr(path);
+    if p == null { return false; }
+    let r = remove(p);
+    dealloc(p);
+    return r == 0;
+}

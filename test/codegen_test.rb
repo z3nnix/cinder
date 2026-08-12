@@ -274,6 +274,30 @@ class CodegenTest < Minitest::Test
     CND
   end
 
+  def test_defer_runs_on_every_return
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      fn run(buf: []i32, early: bool) -> i32 {
+          defer buf[1] = 2;
+          if early { return 10; }
+          defer buf[2] = 3;
+          return 20;
+      }
+      fn main() -> i32 {
+          let a = [0, 0, 0];
+          let r1 = run(a[..], true);
+          if r1 != 10 { return 1; }
+          if a[1] != 2 { return 2; }
+          let b = [0, 0, 0];
+          let r2 = run(b[..], false);
+          if r2 != 20 { return 3; }
+          if b[1] != 2 { return 4; }
+          if b[2] != 3 { return 5; }
+          return 0;
+      }
+    CND
+  end
+
   def test_strings_and_pointers
     skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
     assert_equal 147, run_exit(<<~CND)

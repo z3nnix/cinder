@@ -134,22 +134,36 @@ module Cinder
 
     def emit_entry_wrapper
       m = @fns["main"]
-      return unless m && m.params.empty?
+      return unless m
+      unless m.params.empty? || main_signature?(m)
+        raise DiagError.new(m.module_file || "<input>", m.line, m.col,
+          "unsupported main signature: main takes no parameters or `argc: i32, argv: **u8`")
+      end
       ret = m.return_type
+      params = main_signature?(m) ? "i32 %argc, ptr %argv" : ""
+      call_args = main_signature?(m) ? "(i32 %argc, ptr %argv)" : "()"
       @out << ""
-      @out << "define i32 @main() {"
+      @out << "define i32 @main(#{params}) {"
       @out << "entry:"
       if ret.nil?
-        @out << "  call void @cinder_main()"
+        @out << "  call void @cinder_main#{call_args}"
         @out << "  ret i32 0"
       elsif llvm_type(ret) == "i32"
-        @out << "  %r = call i32 @cinder_main()"
+        @out << "  %r = call i32 @cinder_main#{call_args}"
         @out << "  ret i32 %r"
       else
-        @out << "  call #{llvm_type(ret)} @cinder_main()"
+        @out << "  call #{llvm_type(ret)} @cinder_main#{call_args}"
         @out << "  ret i32 0"
       end
       @out << "}"
+    end
+
+    def main_signature?(m)
+      return false unless m.params.length == 2
+      p0, p1 = m.params
+      return false unless p0.type.is_a?(PrimitiveType) && p0.type.name == "i32"
+      return false unless p1.type.is_a?(PointerType) && p1.type.elem.is_a?(PointerType)
+      true
     end
 
     def emit_attr_groups
@@ -485,9 +499,7 @@ module Cinder
     end
 
     def emit_defers
-      until @deferred.empty?
-        gen_stmt(@deferred.pop)
-      end
+      @deferred.reverse_each { |s| gen_stmt(s) }
     end
 
     # statements

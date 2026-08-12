@@ -53,8 +53,25 @@ module Cinder
     def check
       collect_decls
       resolve_all_types
+      check_main_signature
       check_static_asserts
       check_bodies
+    end
+
+    def check_main_signature
+      m = @fns["main"]
+      return unless m
+      return if m.params.empty? || main_signature?(m)
+      report(m, "unsupported main signature: expected `fn main()`, `fn main() -> i32`, " \
+                "`fn main(argc: i32, argv: **u8)`, or `fn main(argc: i32, argv: **u8) -> i32`")
+    end
+
+    def main_signature?(m)
+      return false unless m.params.length == 2
+      p0, p1 = m.params
+      return false unless p0.type.is_a?(PrimitiveType) && p0.type.name == "i32"
+      return false unless p1.type.is_a?(PointerType) && p1.type.elem.is_a?(PointerType)
+      true
     end
 
     private

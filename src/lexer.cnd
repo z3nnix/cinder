@@ -306,6 +306,44 @@ fn suffix_ok(s: []u8, is_float: bool) -> bool {
     return false;
 }
 
+fn is_escape_char(c: u8) -> bool {
+    if c == 'n' as u8 { return true; }
+    if c == 't' as u8 { return true; }
+    if c == 'r' as u8 { return true; }
+    if c == '0' as u8 { return true; }
+    if c == '\\' as u8 { return true; }
+    if c == '"' as u8 { return true; }
+    if c == '\'' as u8 { return true; }
+    return false;
+}
+
+fn lex_escape(L: *Lexer, line: i32, col: i32) -> bool {
+    if at_end(L) {
+        return false;
+    }
+    let c = peek(L);
+    if c == 'x' as u8 {
+        advance(L);
+        let mut n: i32 = 0;
+        while n < 2 && !at_end(L) && ascii_is_hex_digit(peek(L)) {
+            advance(L);
+            n += 1;
+        }
+        if n != 2 {
+            lexer_report(L, line, col, "\\x escape needs two hex digits");
+            return false;
+        }
+        return true;
+    }
+    if is_escape_char(c) {
+        advance(L);
+        return true;
+    }
+    lexer_report(L, line, col, "unknown escape sequence");
+    advance(L);
+    return false;
+}
+
 fn lex_string(L: *Lexer) -> Token {
     let line = L.line;
     let col = L.col;
@@ -328,9 +366,11 @@ fn lex_string(L: *Lexer) -> Token {
             return make_token(L, TokenType.String, L.src[start .. L.pos], line, col);
         }
         if ch == '\\' as u8 && !raw {
+            let el = L.line;
+            let ec = L.col;
             advance(L);
+            lex_escape(L, el, ec);
             if at_end(L) { break; }
-            advance(L); // symbol after backslash
         } else {
             advance(L);
         }
@@ -354,21 +394,7 @@ fn lex_char(L: *Lexer) -> Token {
 
     if peek(L) == '\\' as u8 {
         advance(L);
-        if at_end(L) {
-            lexer_report(L, line, col, "unterminated character literal");
-            return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
-        }
-        if peek(L) == 'x' as u8 {
-            advance(L);
-            let mut n: i32 = 0;
-            while n < 2 && !at_end(L) && ascii_is_hex_digit(peek(L)) {
-                advance(L);
-                n += 1;
-            }
-            if n != 2 { lexer_report(L, line, col, "\\x escape needs two hex digits"); }
-        } else {
-            advance(L);
-        }
+        lex_escape(L, line, col);
     } else {
         advance(L);
     }

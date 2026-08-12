@@ -8,7 +8,7 @@ prepare() {
 }
 
 build() {
-    cinder build src/main.cnd -o dist/cinder.bin --emit=bin 
+    cinder build src/main.cnd -o dist/cinder --emit=bin 
 }
 
 prepare

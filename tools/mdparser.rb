@@ -23,21 +23,14 @@ class MDParser
     FileUtils.mkdir_p(@output_dir)
     create_css
 
-    readme_content = parse_readme
     @files.each { |f| parse_file(f) }
-    generate_index(readme_content)
+    generate_index
 
     puts ":: Site generated #{@output_dir}"
     puts ":: Page generated - #{@files.size + 1}"
   end
 
   private
-
-  def parse_readme
-    path = File.join(@docs_dir, 'README.md')
-    return '' unless File.exist?(path)
-    parse_markdown(File.read(path, encoding: 'UTF-8'))
-  end
 
   def parse_file(filename)
     @current_file = filename
@@ -263,7 +256,7 @@ class MDParser
         level = $1.length
         title = $2.strip
         anchor = title.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')
-        result << "<h#{level} id=\"#{anchor}\">#{parse_inline($2)}</h#{level}>"
+        result << "<h#{level} id=\"#{anchor}\">#{parse_inline(title)}</h#{level}>"
         i += 1
         next
       end
@@ -466,7 +459,7 @@ class MDParser
     HTML
   end
 
-  def generate_index(readme_content)
+  def generate_index
     examples = @files.map do |f|
       num = f.match(/^(\d+)/)&.captures&.first
       title = extract_title_from_file(f)
@@ -683,7 +676,6 @@ class MDParser
     }
     .prose td { color:#ddd; }
 
-    /* Page navigation */
     .page-nav {
       display:flex;
       justify-content:space-between;
@@ -698,7 +690,6 @@ class MDParser
       color:#aaa;
     }
 
-    /* Index page */
     .description {
       color:#aaa;
       font-style:italic;
@@ -749,7 +740,6 @@ class MDParser
       .prose h2 { font-size:1.3em; }
       body { padding:20px; }
     }
-    /* Syntax highlighting for dark (simple) */
     .hljs-comment { color:#666; font-style:italic; }
     .hljs-keyword { color:#f78; }
     .hljs-string { color:#8cf; }

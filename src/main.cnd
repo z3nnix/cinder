@@ -1,0 +1,26 @@
+use "std/io.cnd";
+use "std/core/str.cnd";
+
+use "lib/cstr.cnd";
+use "commands.cnd";
+
+fn main(argc: i32, argv: **u8) -> i32 {
+    let command = get_command(argc, argv);
+
+    if str_equal(command, "--version") {
+        println("Cinder compiler v0.1-selfhost");
+        return 0;
+    }
+    if str_equal(command, "tokens") {
+        return command_tokens(argc, argv);
+    }
+    if str_equal(command, "check") {
+        return command_check(argc, argv);
+    }
+    if str_equal(command, "build") {
+        return command_build(argc, argv);
+    }
+
+    command_help();
+    return 0;
+}

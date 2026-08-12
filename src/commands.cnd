@@ -1,0 +1,117 @@
+use "std/io.cnd";
+use "std/file.cnd";
+use "std/alloc.cnd";
+
+use "lib/cstr.cnd";
+use "lexer.cnd";
+
+export fn get_command(argc: i32, argv: **u8) -> []u8 {
+    if argc < 2 {
+        return "";
+    }
+    unsafe {
+        return cstr_slice(argv[1]);
+    }
+}
+
+export fn command_help() {
+    println("Usage: cinder <command> [options] <file.cnd>\n");
+    println("Commands:");
+    println("\tcheck <file>\t run full pipeline: lexer -> parser -> loader -> sema");
+    println("\tbuild <file>\t check + generate LLVM IR (or asm/obj/bin via toolchain)");
+    println("\ttokens <file>\t dump tokens (debug)");
+    println("\tast <file>\t dump AST (debug)\n");
+    println("Options:");
+    println("\t-h, --help\t show this help");
+    println("\t-v, --verbose\t keep intermediate files and print toolchain commands");
+    println("\t--emit=...\t output format (avaible: llvm, asm, obj, bin; default: llvm)");
+    println("\t-o <fil>\t output file (default: <input>.*)");
+}
+
+fn arg_path(argc: i32, argv: **u8) -> ?[]u8 {
+    if argc < 3 {
+        return none;
+    }
+    unsafe {
+        return cstr_slice(argv[2]);
+    }
+}
+
+fn print_s(s: []u8) {
+    print(&s, .S);
+}
+
+fn dump_token(tok: Token) {
+    print_s(token_type_name(tok.type));
+    print_s("(");
+    print_s(tok.lexeme);
+    print_s(")@");
+    let buf: [32]u8 = [0; 32];
+    let n = sprintf(buf[..].ptr, c"%d:%d", tok.line, tok.col) as usize;
+    print_s(buf[..n]);
+    putchar(10);
+}
+
+
+fn scan_file(argc: i32, argv: **u8) -> i32 {
+    let path = arg_path(argc, argv) else {
+        println("err: missing source path");
+        return 1;
+    };
+
+    let src = file_read_all(path) else {
+        println("err: cannot read file");
+        return 2;
+    };
+    defer unsafe { dealloc(src.ptr); }
+
+    let mut lexer = lexer_new(src);
+    loop {
+        let tok = lexer_next(&lexer);
+        if tok.type == TokenType.Eof { break; }
+    }
+
+    if lexer_has_error(&lexer) {
+        print_err(lexer_error(&lexer));
+        return 1;
+    }
+    return 0;
+}
+
+export fn command_tokens(argc: i32, argv: **u8) -> i32 {
+    let path = arg_path(argc, argv) else {
+        println("err: missing source path");
+        return 1;
+    };
+
+    let src = file_read_all(path) else {
+        println("err: cannot read file");
+        return 2;
+    };
+    defer unsafe { dealloc(src.ptr); }
+
+    let mut lexer = lexer_new(src);
+    loop {
+        let tok = lexer_next(&lexer);
+        dump_token(tok);
+        if tok.type == TokenType.Eof { break; }
+    }
+
+    if lexer_has_error(&lexer) {
+        print_err(lexer_error(&lexer));
+        return 1;
+    }
+    return 0;
+}
+
+export fn command_check(argc: i32, argv: **u8) -> i32 {
+    let status = scan_file(argc, argv);
+    if status == 0 {
+        println("check ok");
+    }
+    return status;
+}
+
+export fn command_build(argc: i32, argv: **u8) -> i32 {
+    println("not implemented");
+}

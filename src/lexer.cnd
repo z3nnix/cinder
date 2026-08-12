@@ -1,0 +1,532 @@
+use "std/io.cnd";
+use "std/core/ascii.cnd";
+use "std/core/str.cnd";
+use "std/string.cnd";
+
+export enum TokenType {
+    // Ident, values
+    Ident; Int; Float; Char; String;
+    Bool; None; Null;
+    
+    // keywords
+    As; Break; Const; Continue; Defer; Else; Enum; Extern; Fn; For; If;
+    Let; Loop; Mut; Return; Switch; Unsafe; Use; While; Volatile;
+    
+    // operators and separators
+    Plus; Minus; Star; Slash; Percent;
+    Eq; EqEq; Bang; BangEq; Lt; Lte; Gt; Gte;
+    Shl; Shr; ShlEq; ShrEq;
+    Amp; AmpAmp; AmpEq; Pipe; PipePipe; PipeEq; Caret; CaretEq;
+    PlusEq; MinusEq; StarEq; SlashEq; PercentEq;
+    Dot; DotDot; DotDotEq; Ellipsis;
+    Colon; Semicolon; Comma;
+    Lparen; Rparen; Lbrace; Rbrace; Lbracket; Rbracket;
+    Arrow; Question; Hash;
+    
+    // etc
+    Unknown; Eof;
+}
+
+export struct Token {
+    type: TokenType,
+    lexeme: []u8,
+    line: i32,
+    col: i32,
+}
+
+struct Lexer {
+    src: []u8,
+    pos: usize,
+    line: i32,
+    col: i32,
+    err: String,
+}
+
+export fn lexer_new(src: []u8) -> Lexer {
+    return Lexer {
+        src: src,
+        pos: 0,
+        line: 1,
+        col: 1,
+        err: string_new(),
+    };
+}
+
+export fn lexer_has_error(L: *Lexer) -> bool {
+    return string_len(&L.err) > 0;
+}
+
+export fn lexer_error(L: *Lexer) -> []u8 {
+    return string_as_slice(&L.err);
+}
+
+fn lexer_report(L: *Lexer, line: i32, col: i32, msg: []u8) {
+    let buf: [64]u8 = [0; 64];
+    let n = sprintf(buf[..].ptr, c"%d:%d: ", line, col) as usize;
+    string_append(&L.err, buf[..n]);
+    string_append(&L.err, msg);
+    string_push_byte(&L.err, '\n' as u8);
+}
+
+fn make_token(L: *Lexer, ttype: TokenType, lexeme: []u8, line: i32, col: i32) -> Token {
+    return Token {
+        type: ttype,
+        lexeme: lexeme,
+        line: line,
+        col: col,
+    };
+}
+
+fn at_end(L: *Lexer) -> bool {
+    return L.pos >= L.src.len;
+}
+
+fn at_end_at(L: *Lexer, off: usize) -> bool {
+    return L.pos + off >= L.src.len;
+}
+
+fn peek(L: *Lexer) -> u8 {
+    return L.src[L.pos];
+}
+
+fn peek_at(L: *Lexer, off: usize) -> u8 {
+    return L.src[L.pos + off];
+}
+
+fn advance(L: *Lexer) {
+    if L.src[L.pos] == '\n' as u8 {
+        L.line += 1;
+        L.col = 1;
+    } else {
+        L.col += 1;
+    }
+    L.pos += 1;
+}
+
+export fn lexer_next(L: *Lexer) -> Token {
+    skip_trivia(L);
+
+    if at_end(L) {
+        return make_token(L, TokenType.Eof, "", L.line, L.col);
+    }
+
+    let c = peek(L);
+
+    // strings with r"", b"", c"" prefiexes
+    if c == 'r' as u8 || c == 'b' as u8 || c == 'c' as u8 {
+        if !at_end_at(L, 1) && peek_at(L, 1) == '"' as u8 {
+            return lex_string(L);
+        }
+    }
+
+    if c == '"' as u8 {
+        return lex_string(L);
+    }
+    if c == '\'' as u8 {
+        return lex_char(L);
+    }
+    if ascii_is_digit(c) {
+        return lex_number(L);
+    }
+    if ascii_is_alpha(c) || c == '_' as u8 {
+        return lex_ident(L);
+    }
+
+    return lex_punct(L);
+}
+
+// comments n spaces
+
+fn skip_trivia(L: *Lexer) {
+    loop {
+        if at_end(L) { return; }
+
+        let c = peek(L);
+        if ascii_is_space(c) {
+            advance(L);
+        } else if c == '/' as u8 && !at_end_at(L, 1) && peek_at(L, 1) == '/' as u8 {
+            skip_line_comment(L);
+        } else if c == '/' as u8 && !at_end_at(L, 1) && peek_at(L, 1) == '*' as u8 {
+            skip_block_comment(L);
+        } else {
+            return;
+        }
+    }
+}
+
+fn skip_line_comment(L: *Lexer) {
+    while !at_end(L) && peek(L) != '\n' as u8 {
+        advance(L);
+    }
+}
+
+fn skip_block_comment(L: *Lexer) {
+    advance(L); // '/'
+    advance(L); // '*'
+
+    loop {
+        if at_end(L) {
+            lexer_report(L, L.line, L.col, "unterminated block comment");
+            return;
+        }
+        if peek(L) == '*' as u8 && !at_end_at(L, 1) && peek_at(L, 1) == '/' as u8 {
+            advance(L);
+            advance(L);
+            return;
+        }
+        advance(L);
+    }
+}
+
+// idents and keywords
+
+fn lex_ident(L: *Lexer) -> Token {
+    let line = L.line;
+    let col = L.col;
+    let start = L.pos;
+
+    while !at_end(L) && (ascii_is_alnum(peek(L)) || peek(L) == '_' as u8) {
+        advance(L);
+    }
+
+    let text = L.src[start .. L.pos];
+    return make_token(L, keyword_type(text), text, line, col);
+}
+
+fn keyword_type(text: []u8) -> TokenType {
+    if str_equal(text, "as") { return TokenType.As; }
+    if str_equal(text, "break") { return TokenType.Break; }
+    if str_equal(text, "const") { return TokenType.Const; }
+    if str_equal(text, "continue") { return TokenType.Continue; }
+    if str_equal(text, "defer") { return TokenType.Defer; }
+    if str_equal(text, "else") { return TokenType.Else; }
+    if str_equal(text, "enum") { return TokenType.Enum; }
+    if str_equal(text, "extern") { return TokenType.Extern; }
+    if str_equal(text, "fn") { return TokenType.Fn; }
+    if str_equal(text, "for") { return TokenType.For; }
+    if str_equal(text, "if") { return TokenType.If; }
+    if str_equal(text, "let") { return TokenType.Let; }
+    if str_equal(text, "loop") { return TokenType.Loop; }
+    if str_equal(text, "mut") { return TokenType.Mut; }
+    if str_equal(text, "return") { return TokenType.Return; }
+    if str_equal(text, "switch") { return TokenType.Switch; }
+    if str_equal(text, "unsafe") { return TokenType.Unsafe; }
+    if str_equal(text, "use") { return TokenType.Use; }
+    if str_equal(text, "while") { return TokenType.While; }
+    if str_equal(text, "volatile") { return TokenType.Volatile; }
+    if str_equal(text, "true") { return TokenType.Bool; }
+    if str_equal(text, "false") { return TokenType.Bool; }
+    if str_equal(text, "none") { return TokenType.None; }
+    if str_equal(text, "null") { return TokenType.Null; }
+    return TokenType.Ident;
+}
+
+fn lex_number(L: *Lexer) -> Token {
+    let line = L.line;
+    let col = L.col;
+    let start = L.pos;
+    let mut is_float = false;
+
+    // 0x, 0b, 0o prefiexes
+    if peek(L) == '0' as u8 && !at_end_at(L, 1) {
+        let nxt = peek_at(L, 1);
+        if nxt == 'x' as u8 || nxt == 'X' as u8 {
+            advance(L);
+            advance(L);
+            let digits = L.pos;
+            skip_digits(L, 16);
+            if L.pos == digits { lexer_report(L, line, col, "hex literal needs digits"); }
+        } else if nxt == 'b' as u8 || nxt == 'B' as u8 {
+            advance(L);
+            advance(L);
+            let digits = L.pos;
+            skip_digits(L, 2);
+            if L.pos == digits { lexer_report(L, line, col, "binary literal needs digits"); }
+        } else if nxt == 'o' as u8 || nxt == 'O' as u8 {
+            advance(L);
+            advance(L);
+            let digits = L.pos;
+            skip_digits(L, 8);
+            if L.pos == digits { lexer_report(L, line, col, "octal literal needs digits"); }
+        } else {
+            skip_digits(L, 10);
+        }
+    } else {
+        skip_digits(L, 10);
+    }
+
+    // after ,
+    if !at_end(L) && peek(L) == '.' as u8 && !at_end_at(L, 1) && ascii_is_digit(peek_at(L, 1)) {
+        advance(L);
+        skip_digits(L, 10);
+        is_float = true;
+    }
+
+    // suffix like 42u32, 3.14f64
+    let suffix_start = L.pos;
+    while !at_end(L) && ascii_is_alnum(peek(L)) {
+        advance(L);
+    }
+    let suffix = L.src[suffix_start .. L.pos];
+    if suffix.len > 0 && !suffix_ok(suffix, is_float) {
+        lexer_report(L, line, col, "invalid numeric suffix");
+    }
+
+    let ttype = if is_float { TokenType.Float } else { TokenType.Int };
+    return make_token(L, ttype, L.src[start .. L.pos], line, col);
+}
+
+fn skip_digits(L: *Lexer, base: u32) {
+    while !at_end(L) {
+        if peek(L) == '_' as u8 {
+            advance(L);
+            continue;
+        }
+        let d = ascii_digit_value(peek(L)) else { return; };
+        if (d as u32) < base {
+            advance(L);
+        } else {
+            return;
+        }
+    }
+}
+
+fn suffix_ok(s: []u8, is_float: bool) -> bool {
+    if is_float {
+        let types = ["f32", "f64"];
+        for t in types {
+            if str_equal(s, t) { return true; }
+        }
+        return false;
+    }
+    let types = ["u8", "u16", "u32", "u64", "u128", "i8", "i16", "i32", "i64", "i128", "usize", "isize"];
+    for t in types {
+        if str_equal(s, t) { return true; }
+    }
+    return false;
+}
+
+fn lex_string(L: *Lexer) -> Token {
+    let line = L.line;
+    let col = L.col;
+    let start = L.pos;
+
+    let c = peek(L);
+    let raw = c == 'r' as u8;
+    if c == 'r' as u8 || c == 'b' as u8 || c == 'c' as u8 {
+        advance(L); // prefix
+    }
+
+    advance(L); // open '
+
+    loop {
+        if at_end(L) { break; }
+
+        let ch = peek(L);
+        if ch == '"' as u8 {
+            advance(L);
+            return make_token(L, TokenType.String, L.src[start .. L.pos], line, col);
+        }
+        if ch == '\\' as u8 && !raw {
+            advance(L);
+            if at_end(L) { break; }
+            advance(L); // symbol after backslash
+        } else {
+            advance(L);
+        }
+    }
+
+    lexer_report(L, line, col, "unterminated string literal");
+    return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
+}
+
+// 'x', '\n', '\x1b' lexems
+fn lex_char(L: *Lexer) -> Token {
+    let line = L.line;
+    let col = L.col;
+    let start = L.pos;
+    advance(L); // open '
+
+    if at_end(L) {
+        lexer_report(L, line, col, "unterminated character literal");
+        return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
+    }
+
+    if peek(L) == '\\' as u8 {
+        advance(L);
+        if at_end(L) {
+            lexer_report(L, line, col, "unterminated character literal");
+            return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
+        }
+        if peek(L) == 'x' as u8 {
+            advance(L);
+            let mut n: i32 = 0;
+            while n < 2 && !at_end(L) && ascii_is_hex_digit(peek(L)) {
+                advance(L);
+                n += 1;
+            }
+            if n != 2 { lexer_report(L, line, col, "\\x escape needs two hex digits"); }
+        } else {
+            advance(L);
+        }
+    } else {
+        advance(L);
+    }
+
+    if !at_end(L) && peek(L) == '\'' as u8 {
+        advance(L);
+        return make_token(L, TokenType.Char, L.src[start .. L.pos], line, col);
+    }
+
+    lexer_report(L, line, col, "unterminated character literal");
+    return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
+}
+
+fn take(L: *Lexer, s: []u8) -> bool {
+    if L.pos + s.len > L.src.len { return false; }
+    if !str_equal(L.src[L.pos .. L.pos + s.len], s) { return false; }
+    L.pos += s.len;
+    return true;
+}
+
+fn lex_punct(L: *Lexer) -> Token {
+    let line = L.line;
+    let col = L.col;
+    let start = L.pos;
+
+    if take(L, "<<=") { return make_token(L, TokenType.ShlEq, L.src[start .. L.pos], line, col); }
+    if take(L, ">>=") { return make_token(L, TokenType.ShrEq, L.src[start .. L.pos], line, col); }
+    if take(L, "..=") { return make_token(L, TokenType.DotDotEq, L.src[start .. L.pos], line, col); }
+    if take(L, "...") { return make_token(L, TokenType.Ellipsis, L.src[start .. L.pos], line, col); }
+
+    if take(L, "->") { return make_token(L, TokenType.Arrow, L.src[start .. L.pos], line, col); }
+    if take(L, "=>") { return make_token(L, TokenType.Arrow, L.src[start .. L.pos], line, col); }
+    if take(L, "==") { return make_token(L, TokenType.EqEq, L.src[start .. L.pos], line, col); }
+    if take(L, "!=") { return make_token(L, TokenType.BangEq, L.src[start .. L.pos], line, col); }
+    if take(L, "<=") { return make_token(L, TokenType.Lte, L.src[start .. L.pos], line, col); }
+    if take(L, ">=") { return make_token(L, TokenType.Gte, L.src[start .. L.pos], line, col); }
+    if take(L, "&&") { return make_token(L, TokenType.AmpAmp, L.src[start .. L.pos], line, col); }
+    if take(L, "||") { return make_token(L, TokenType.PipePipe, L.src[start .. L.pos], line, col); }
+    if take(L, "<<") { return make_token(L, TokenType.Shl, L.src[start .. L.pos], line, col); }
+    if take(L, ">>") { return make_token(L, TokenType.Shr, L.src[start .. L.pos], line, col); }
+    if take(L, "..") { return make_token(L, TokenType.DotDot, L.src[start .. L.pos], line, col); }
+    if take(L, "+=") { return make_token(L, TokenType.PlusEq, L.src[start .. L.pos], line, col); }
+    if take(L, "-=") { return make_token(L, TokenType.MinusEq, L.src[start .. L.pos], line, col); }
+    if take(L, "*=") { return make_token(L, TokenType.StarEq, L.src[start .. L.pos], line, col); }
+    if take(L, "/=") { return make_token(L, TokenType.SlashEq, L.src[start .. L.pos], line, col); }
+    if take(L, "%=") { return make_token(L, TokenType.PercentEq, L.src[start .. L.pos], line, col); }
+    if take(L, "&=") { return make_token(L, TokenType.AmpEq, L.src[start .. L.pos], line, col); }
+    if take(L, "|=") { return make_token(L, TokenType.PipeEq, L.src[start .. L.pos], line, col); }
+    if take(L, "^=") { return make_token(L, TokenType.CaretEq, L.src[start .. L.pos], line, col); }
+
+    if take(L, "+") { return make_token(L, TokenType.Plus, L.src[start .. L.pos], line, col); }
+    if take(L, "-") { return make_token(L, TokenType.Minus, L.src[start .. L.pos], line, col); }
+    if take(L, "*") { return make_token(L, TokenType.Star, L.src[start .. L.pos], line, col); }
+    if take(L, "/") { return make_token(L, TokenType.Slash, L.src[start .. L.pos], line, col); }
+    if take(L, "%") { return make_token(L, TokenType.Percent, L.src[start .. L.pos], line, col); }
+    if take(L, "=") { return make_token(L, TokenType.Eq, L.src[start .. L.pos], line, col); }
+    if take(L, "!") { return make_token(L, TokenType.Bang, L.src[start .. L.pos], line, col); }
+    if take(L, "<") { return make_token(L, TokenType.Lt, L.src[start .. L.pos], line, col); }
+    if take(L, ">") { return make_token(L, TokenType.Gt, L.src[start .. L.pos], line, col); }
+    if take(L, "&") { return make_token(L, TokenType.Amp, L.src[start .. L.pos], line, col); }
+    if take(L, "|") { return make_token(L, TokenType.Pipe, L.src[start .. L.pos], line, col); }
+    if take(L, "^") { return make_token(L, TokenType.Caret, L.src[start .. L.pos], line, col); }
+    if take(L, ".") { return make_token(L, TokenType.Dot, L.src[start .. L.pos], line, col); }
+    if take(L, ":") { return make_token(L, TokenType.Colon, L.src[start .. L.pos], line, col); }
+    if take(L, ";") { return make_token(L, TokenType.Semicolon, L.src[start .. L.pos], line, col); }
+    if take(L, ",") { return make_token(L, TokenType.Comma, L.src[start .. L.pos], line, col); }
+    if take(L, "(") { return make_token(L, TokenType.Lparen, L.src[start .. L.pos], line, col); }
+    if take(L, ")") { return make_token(L, TokenType.Rparen, L.src[start .. L.pos], line, col); }
+    if take(L, "{") { return make_token(L, TokenType.Lbrace, L.src[start .. L.pos], line, col); }
+    if take(L, "}") { return make_token(L, TokenType.Rbrace, L.src[start .. L.pos], line, col); }
+    if take(L, "[") { return make_token(L, TokenType.Lbracket, L.src[start .. L.pos], line, col); }
+    if take(L, "]") { return make_token(L, TokenType.Rbracket, L.src[start .. L.pos], line, col); }
+    if take(L, "?") { return make_token(L, TokenType.Question, L.src[start .. L.pos], line, col); }
+    if take(L, "#") { return make_token(L, TokenType.Hash, L.src[start .. L.pos], line, col); }
+
+    lexer_report(L, line, col, "unexpected character");
+    advance(L);
+    return make_token(L, TokenType.Unknown, L.src[start .. L.pos], line, col);
+}
+
+// ts for diag
+export fn token_type_name(t: TokenType) -> []u8 {
+    switch t {
+        TokenType.Ident => { return "ident"; }
+        TokenType.Int => { return "int"; }
+        TokenType.Float => { return "float"; }
+        TokenType.Char => { return "char"; }
+        TokenType.String => { return "string"; }
+        TokenType.Bool => { return "bool"; }
+        TokenType.None => { return "none"; }
+        TokenType.Null => { return "null"; }
+        TokenType.As => { return "as"; }
+        TokenType.Break => { return "break"; }
+        TokenType.Const => { return "const"; }
+        TokenType.Continue => { return "continue"; }
+        TokenType.Defer => { return "defer"; }
+        TokenType.Else => { return "else"; }
+        TokenType.Enum => { return "enum"; }
+        TokenType.Extern => { return "extern"; }
+        TokenType.Fn => { return "fn"; }
+        TokenType.For => { return "for"; }
+        TokenType.If => { return "if"; }
+        TokenType.Let => { return "let"; }
+        TokenType.Loop => { return "loop"; }
+        TokenType.Mut => { return "mut"; }
+        TokenType.Return => { return "return"; }
+        TokenType.Switch => { return "switch"; }
+        TokenType.Unsafe => { return "unsafe"; }
+        TokenType.Use => { return "use"; }
+        TokenType.While => { return "while"; }
+        TokenType.Volatile => { return "volatile"; }
+        TokenType.Plus => { return "plus"; }
+        TokenType.Minus => { return "minus"; }
+        TokenType.Star => { return "star"; }
+        TokenType.Slash => { return "slash"; }
+        TokenType.Percent => { return "percent"; }
+        TokenType.Eq => { return "eq"; }
+        TokenType.EqEq => { return "eq_eq"; }
+        TokenType.Bang => { return "bang"; }
+        TokenType.BangEq => { return "bang_eq"; }
+        TokenType.Lt => { return "lt"; }
+        TokenType.Lte => { return "lte"; }
+        TokenType.Gt => { return "gt"; }
+        TokenType.Gte => { return "gte"; }
+        TokenType.Shl => { return "shl"; }
+        TokenType.Shr => { return "shr"; }
+        TokenType.ShlEq => { return "shl_eq"; }
+        TokenType.ShrEq => { return "shr_eq"; }
+        TokenType.Amp => { return "amp"; }
+        TokenType.AmpAmp => { return "and_and"; }
+        TokenType.AmpEq => { return "and_eq"; }
+        TokenType.Pipe => { return "pipe"; }
+        TokenType.PipePipe => { return "or_or"; }
+        TokenType.PipeEq => { return "or_eq"; }
+        TokenType.Caret => { return "caret"; }
+        TokenType.CaretEq => { return "xor_eq"; }
+        TokenType.PlusEq => { return "plus_eq"; }
+        TokenType.MinusEq => { return "minus_eq"; }
+        TokenType.StarEq => { return "star_eq"; }
+        TokenType.SlashEq => { return "slash_eq"; }
+        TokenType.PercentEq => { return "percent_eq"; }
+        TokenType.Dot => { return "dot"; }
+        TokenType.DotDot => { return "dotdot"; }
+        TokenType.DotDotEq => { return "dotdot_eq"; }
+        TokenType.Ellipsis => { return "ellipsis"; }
+        TokenType.Colon => { return "colon"; }
+        TokenType.Semicolon => { return "semicolon"; }
+        TokenType.Comma => { return "comma"; }
+        TokenType.Lparen => { return "lparen"; }
+        TokenType.Rparen => { return "rparen"; }
+        TokenType.Lbrace => { return "lbrace"; }
+        TokenType.Rbrace => { return "rbrace"; }
+        TokenType.Lbracket => { return "lbracket"; }
+        TokenType.Rbracket => { return "rbracket"; }
+        TokenType.Arrow => { return "arrow"; }
+        TokenType.Question => { return "question"; }
+        TokenType.Hash => { return "hash"; }
+        TokenType.Eof => { return "eof"; }
+        else => { return "unknown"; }
+    }
+}

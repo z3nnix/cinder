@@ -759,7 +759,7 @@ module Cinder
       when DeferStmt
         check_stmt(node.stmt, ctx)
       when UnsafeBlock
-        with_unsafe(ctx) { check_block(node.block, ctx) }
+        with_unsafe(ctx) { check_stmt(node.block, ctx) }
       when AsmStmt
         report(node, "asm requires an unsafe block", ctx.module_file) unless ctx.in_unsafe
       when StaticAssertStmt
@@ -782,7 +782,7 @@ module Cinder
     end
 
     def check_block(block, ctx)
-      block.stmts.each { |s| check_stmt(s, ctx) }
+      with_scope(ctx) { block.stmts.each { |s| check_stmt(s, ctx) } }
     end
 
     def check_cond(node, ctx)

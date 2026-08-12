@@ -271,6 +271,39 @@ class SemaTest < Minitest::Test
     CND
   end
 
+  def test_unsafe_block_scopes_variables
+    err(<<~CND, /undefined variable `command`/)
+      fn f(p: *u8) {
+        unsafe {
+          let command: []u8 = p[..0];
+        }
+        if command.len > 0 {
+        }
+      }
+    CND
+  end
+
+  def test_if_body_scopes_variables
+    err(<<~CND, /undefined variable `x`/)
+      fn f(a: bool) {
+        if a { let x = 1; }
+        if x > 0 { }
+      }
+    CND
+  end
+
+  def test_while_body_scopes_variables
+    err(<<~CND, /undefined variable `i`/)
+      fn f(n: i32) {
+        while n > 0 {
+          let i = 1;
+          n -= 1;
+        }
+        let y: i32 = i;
+      }
+    CND
+  end
+
   def test_address_of
     ok("fn f(x: u32) { let p: *u32 = &x; }")
   end

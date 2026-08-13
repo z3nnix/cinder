@@ -12,7 +12,7 @@ require "sema"
 require "targets"
 require "codegen"
 
-$version = "0.1"
+$version = "0.2"
 
 module Cinder
   class CLI

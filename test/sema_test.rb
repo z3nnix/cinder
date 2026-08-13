@@ -66,6 +66,19 @@ class SemaTest < Minitest::Test
     ok("fn f() { let x = 42; let y = 3.14; let c = 'A'; let b = true; }")
   end
 
+  def test_or_sugar_chain
+    ok("fn is_word_sep(i: u8) -> bool { return i == 32 or 9 or 10 or 13; }")
+    ok("fn f(i: i32) -> bool { return i == 1 or 2 or 3 or 4; }")
+    ok("fn f(i: i32, b: bool) -> bool { return i == 1 or b; }")
+    ok("fn f(i: i32, b: bool) -> bool { return b or i == 1; }")
+    ok("fn f(i: i32, b: bool) -> bool { return i == 1 || (b || b); }")
+  end
+
+  def test_or_sugar_chain_error
+    err("fn f(a: bool) -> bool { return a or 5; }", /operands of `\|\|` must be bool/)
+    err("fn f(i: bool) -> bool { return i == true or 9; }", /cannot compare/)
+  end
+
   def test_type_annotation_adaptation
     ok("fn f() { let a: u32 = 42; let b: u64 = 100; let f: f64 = 3; let c: u8 = 'A'; }")
   end

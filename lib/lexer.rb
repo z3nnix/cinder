@@ -17,8 +17,8 @@ module Cinder
 
   class Lexer
     KEYWORDS = %w[
-      as break const continue defer else enum extern fn for if let loop mut
-      return switch unsafe use while volatile
+      as and break const continue defer else enum extern fn for if let loop mut
+      or return switch unsafe use while volatile
     ].to_h { |k| [k, k.to_sym] }
 
     INT_TYPES = %w[u8 u16 u32 u64 u128 i8 i16 i32 i64 i128 usize isize]

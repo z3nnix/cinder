@@ -374,6 +374,27 @@ class ParserTest < Minitest::Test
     assert_equal 0xF, inner.rhs.value
   end
 
+  def test_or_and_keywords
+    prog = parse_ok("fn f(i: i32) -> bool { return i == 32 or 9 or 10 and i != 0; }")
+    ret = prog.decls[0].body.stmts[0]
+    root = ret.value
+    assert_instance_of BinaryExpr, root
+    assert_equal "||", root.op
+    assert root.sugar
+    assert_instance_of BinaryExpr, root.lhs
+    assert_equal "||", root.lhs.op
+    assert root.lhs.sugar
+    assert_equal "==", root.lhs.lhs.op
+    assert_nil root.lhs.lhs.sugar
+    assert_equal 9, root.lhs.rhs.value
+    rhs = root.rhs
+    assert_instance_of BinaryExpr, rhs
+    assert_equal "&&", rhs.op
+    assert rhs.sugar
+    assert_equal 10, rhs.lhs.value
+    assert_equal "!=", rhs.rhs.op
+  end
+
   def test_bitwise_xor_shift
     prog = parse_ok("fn f(a: u8, b: u8) -> u8 { return a ^ b; }")
     ret = prog.decls[0].body.stmts[0]

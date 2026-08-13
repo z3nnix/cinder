@@ -1193,6 +1193,10 @@ module Cinder
       op = node.op
       case op
       when "&&", "||"
+        if op == "||" && node.sugar && b != UNKNOWN && !equal(b, bool_type) && (base = chain_base(node.lhs))
+          node.rhs = BinaryExpr.new(node.rhs.line, node.rhs.col, op: "==", lhs: base, rhs: node.rhs)
+          b = infer_expr(node.rhs, ctx)
+        end
         if (a == UNKNOWN || equal(a, bool_type)) && (b == UNKNOWN || equal(b, bool_type))
           bool_type
         else
@@ -1239,6 +1243,17 @@ module Cinder
         end
       else
         UNKNOWN
+      end
+    end
+
+    def chain_base(node)
+      case node
+      when BinaryExpr
+        if node.op == "||" && node.sugar
+          chain_base(node.lhs)
+        elsif node.op == "=="
+          node.lhs
+        end
       end
     end
 

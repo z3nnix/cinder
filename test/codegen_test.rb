@@ -298,6 +298,42 @@ class CodegenTest < Minitest::Test
     CND
   end
 
+  def test_or_sugar_chain
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      fn is_word_sep(i: u8) -> bool { return i == 32 or 9 or 10 or 13; }
+      fn main() -> i32 {
+          let sep = [32u8, 9u8, 10u8, 13u8, 11u8, 12u8, 65u8];
+          let s = sep[..];
+          let mut hits: i32 = 0;
+          let mut i: usize = 0;
+          while i < s.len {
+              if is_word_sep(s[i]) { hits += 1; }
+              i += 1;
+          }
+          return if hits == 4 { 0 } else { hits };
+      }
+    CND
+  end
+
+  def test_defer_captures_block_local
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 70, run_exit(<<~CND)
+      fn run(buf: []i32) -> i32 {
+          unsafe {
+              let x = 7;
+              defer buf[1] = x;
+          }
+          return 0;
+      }
+      fn main() -> i32 {
+          let b = [0, 0, 0];
+          let r = run(b[..]);
+          return b[1] * 10 + r;
+      }
+    CND
+  end
+
   def test_strings_and_pointers
     skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
     assert_equal 147, run_exit(<<~CND)

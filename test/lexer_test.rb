@@ -16,8 +16,8 @@ class LexerTest < Minitest::Test
   end
 
   def test_keywords
-    src = "as break const continue defer else enum fn for if let loop mut return switch unsafe use while"
-    expected = %i[as break const continue defer else enum fn for if let loop mut return switch unsafe use while] + [:eof]
+    src = "as and break const continue defer else enum fn for if let loop mut or return switch unsafe use while"
+    expected = %i[as and break const continue defer else enum fn for if let loop mut or return switch unsafe use while] + [:eof]
     assert_equal expected, types(src)
   end
 

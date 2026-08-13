@@ -9,7 +9,7 @@ module Cinder
     }.freeze
 
     BINARY_PREC = {
-      or_or: 3, and_and: 4,
+      or: 3, or_or: 3, and: 4, and_and: 4,
       pipe: 5, caret: 6, amp: 7,
       eq_eq: 8, bang_eq: 8,
       lt: 9, lte: 9, gt: 9, gte: 9,
@@ -663,9 +663,18 @@ module Cinder
           prec = BINARY_PREC[tok.type]
           break unless prec && prec >= min_prec
           op = tok.value
+          sugar = nil
+          case tok.type
+          when :or
+            op = "||"
+            sugar = true
+          when :and
+            op = "&&"
+            sugar = true
+          end
           advance
           rhs = parse_expression(prec + 1)
-          lhs = BinaryExpr.new(tok.line, tok.col, op: op, lhs: lhs, rhs: rhs)
+          lhs = BinaryExpr.new(tok.line, tok.col, op: op, lhs: lhs, rhs: rhs, sugar: sugar)
         end
       end
       lhs

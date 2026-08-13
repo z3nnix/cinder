@@ -498,8 +498,18 @@ module Cinder
       @loops.pop
     end
 
+    def scope_snapshot
+      @locals.map { |s| s.dup }
+    end
+
     def emit_defers
-      @deferred.reverse_each { |s| gen_stmt(s) }
+      saved = @locals
+      @deferred.reverse_each do |stmt, snapshot|
+        @locals = snapshot
+        gen_stmt(stmt)
+      end
+    ensure
+      @locals = saved
     end
 
     # statements
@@ -537,7 +547,7 @@ module Cinder
       when ContinueStmt
         emit_term("br label %#{@loops.last[:latch]}") if @loops.last
       when DeferStmt
-        @deferred << node.stmt
+        @deferred << [node.stmt, scope_snapshot]
       when UnsafeBlock
         push_scope
         node.block.stmts.each { |s| gen_stmt(s) }

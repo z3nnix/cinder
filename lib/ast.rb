@@ -204,9 +204,10 @@ module Cinder
     class VarExpr < Expr
       attr_accessor :name
     end
-
     class BinaryExpr < Expr
+
       attr_accessor :op, :lhs, :rhs
+      attr_accessor :sugar
     end
 
     class UnaryExpr < Expr

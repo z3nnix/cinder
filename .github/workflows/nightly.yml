@@ -1,0 +1,63 @@
+name: Nightly build
+
+on:
+  schedule:
+    # 02:00 MSK (UTC+3) = 23:00 UTC
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Check for commits in last 24h touching main.rb or lib/**
+        id: changes
+        run: |
+          if git log --since="24 hours ago" --oneline -- main.rb lib/ | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build nightly bootstrap binary
+        if: steps.changes.outputs.changed == 'true'
+        run: bash scripts/build-bootstrap.sh
+
+      - name: Smoke test binary
+        if: steps.changes.outputs.changed == 'true'
+        run: ./dist/cinder --version
+
+      - name: Publish nightly release
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          date=$(date -u +%Y%m%d)
+          tag="nightly-${date}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes
+            git push --delete origin "$tag" || true
+          fi
+          gh release create "$tag" dist/cinder \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Nightly build (${date})" \
+            --notes "Nightly bootstrap build of the Cinder compiler from \`main\`, produced by \`scripts/build-bootstrap.sh\`. Built because commits touched \`main.rb\` or \`lib/**\` in the last 24 hours." \
+            --prerelease

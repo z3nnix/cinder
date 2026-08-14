@@ -31,6 +31,14 @@ fn main() -> i32 {
 - Fast compilation
 - LLVM backend
 
+## Get started
+First, you need install the compiler:
+```bash
+curl https://raw.githubusercontent.com/z3nnix/cinder/refs/heads/main/scripts/install.sh | sudo bash
+```
+_script location is [scripts/install.sh](https://github.com/z3nnix/cinder/blob/main/scripts/install.sh)_
+Next, visit [Cinder by example](https://z3nnix.github.io/cinder) and learn Cinder step by step :)
+
 ## Documentation
 
 The [docs/](docs/) directory contains **Cinder by Example**, a set of short,

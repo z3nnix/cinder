@@ -928,8 +928,18 @@ module Cinder
 
     def err_pair(expected, v, src_type)
       r = instr("insertvalue #{llvm_type(expected)} zeroinitializer, i1 false, 0")
-      conv = int_convert(v, src_type, expected.inner)
+      conv = int_type?(expected.inner) ? int_convert(v, src_type, expected.inner) : zero_for(expected.inner)
       instr("insertvalue #{llvm_type(expected)} #{r}, #{llvm_type(expected.inner)} #{conv}, 1")
+    end
+
+    def zero_for(t)
+      if int_type?(t)
+        int_const(0, llvm_type(t))
+      elsif float_type?(t)
+        float_const(0.0, t.name == "f32")
+      else
+        "zeroinitializer"
+      end
     end
 
     def int_convert(v, from, to)

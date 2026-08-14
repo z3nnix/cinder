@@ -203,6 +203,20 @@ class CodegenTest < Minitest::Test
     CND
   end
 
+  def test_error_enum_nonint_payload
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 5, run_exit(<<~CND)
+      enum Err { E1; E2; }
+      fn fail() ![]u8 {
+          return Err.E2;
+      }
+      fn main() -> i32 {
+          let v = fail() else { return 5; };
+          return v.len as i32;
+      }
+    CND
+  end
+
   def test_while_break_continue_loop
     skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
     assert_equal 17, run_exit(<<~CND)

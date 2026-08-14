@@ -2,7 +2,14 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - "test/**"
+      - "main.rb"
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
 
 jobs:
   test:

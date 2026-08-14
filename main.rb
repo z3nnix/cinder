@@ -12,7 +12,7 @@ require "sema"
 require "targets"
 require "codegen"
 
-$version = "0.2"
+$version = File.read("version");
 
 module Cinder
   class CLI
@@ -56,7 +56,7 @@ module Cinder
         @stdout.puts USAGE
         return 0
       when "--version"
-        puts "Cinder compiler v#{$version}-bootstrap"
+        puts $version
         return 0
       when "check", "build", "tokens", "ast"
         run_command(cmd)

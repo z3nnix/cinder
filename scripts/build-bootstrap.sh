@@ -5,6 +5,7 @@ set -euo pipefail
 
 prepare() {
     mkdir -p dist build
+    bash scripts/build-version.sh
 }
 
 rbake_install() {
@@ -21,7 +22,7 @@ rbake_install() {
 }
 
 env() {
-    cp -r lib main.rb build/
+    cp -r lib version main.rb build/
     cd build
     rbake main.rb -o ../dist/cinder
     cd ..

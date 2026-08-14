@@ -12,7 +12,7 @@ require "sema"
 require "targets"
 require "codegen"
 
-$version = File.read("version");
+$version = File.read(File.expand_path("version", __dir__));
 
 module Cinder
   class CLI

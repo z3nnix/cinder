@@ -24,7 +24,7 @@ rbake_install() {
 env() {
     cp -r lib version main.rb build/
     cd build
-    rbake main.rb -o ../dist/cinder
+    rbake main.rb --add version -o ../dist/cinder
     cd ..
 }
 

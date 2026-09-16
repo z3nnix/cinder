@@ -143,8 +143,8 @@ module Cinder
 
       unless reporter.diagnostics.empty?
         render_diagnostics(reporter)
-        return 1
       end
+      return 1 if reporter.error?
       0
     rescue Errno::ENOENT
       @stderr.puts "error: file not found: #{file}"
@@ -161,11 +161,13 @@ module Cinder
     def render_diagnostic(d)
       line_text = source_line(d.file, d.line)
       color = @stderr.respond_to?(:tty?) && @stderr.tty?
+      label = d.warning? ? "warning" : "error"
       out = +"#{d.file}:#{d.line}:#{d.col}: "
       out << if color
-               "\e[1m\e[31merror:\e[0m #{d.message}"
+               code = d.warning? ? "\e[1m\e[33m" : "\e[1m\e[31m"
+               "#{code}#{label}:\e[0m #{d.message}"
              else
-               "error: #{d.message}"
+               "#{label}: #{d.message}"
              end
       if line_text
         gutter = d.line.to_s

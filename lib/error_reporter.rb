@@ -1,16 +1,25 @@
 module Cinder
   class Diagnostic
-    attr_reader :file, :line, :col, :message
+    attr_reader :file, :line, :col, :message, :level
 
-    def initialize(file, line, col, message)
+    def initialize(file, line, col, message, level: :error)
       @file = file
       @line = line
       @col = col
       @message = message
+      @level = level
+    end
+
+    def error?
+      @level == :error
+    end
+
+    def warning?
+      @level == :warning
     end
 
     def to_s
-      "#{file}:#{line}:#{col}: error: #{message}"
+      "#{file}:#{line}:#{col}: #{level}: #{message}"
     end
   end
 
@@ -34,8 +43,12 @@ module Cinder
       @diagnostics << Diagnostic.new(file, line, col, message)
     end
 
-    def error?(diag = nil)
-      @diagnostics.any?
+    def warn(file, line, col, message)
+      @diagnostics << Diagnostic.new(file, line, col, message, level: :warning)
+    end
+
+    def error?
+      @diagnostics.any?(&:error?)
     end
 
     def each(&block)

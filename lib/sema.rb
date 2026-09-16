@@ -17,12 +17,11 @@ module Cinder
     Local = Struct.new(:type, :mutable)
 
     class Context
-      attr_accessor :fn, :ret_type, :in_unsafe, :loop_depth, :module_file, :scopes
+      attr_accessor :fn, :ret_type, :loop_depth, :module_file, :scopes
 
       def initialize
         @fn = nil
         @ret_type = nil
-        @in_unsafe = false
         @loop_depth = 0
         @module_file = nil
         @scopes = []
@@ -696,10 +695,12 @@ module Cinder
 
     def check_fn(decl)
       return unless decl.body
+      if decl.unsafe
+        warn(decl, "'unsafe' function is deprecated and has no effect\nnote: see issue #N for details. this will be removed in a future version.")
+      end
       ctx = Context.new
       ctx.fn = decl
       ctx.ret_type = decl.return_type ? resolve_type(decl.return_type, decl.module_file) : nil
-      ctx.in_unsafe = decl.unsafe
       ctx.module_file = decl.module_file
       stmts = decl.body.stmts
       with_scope(ctx) do
@@ -759,9 +760,10 @@ module Cinder
       when DeferStmt
         check_stmt(node.stmt, ctx)
       when UnsafeBlock
-        with_unsafe(ctx) { check_stmt(node.block, ctx) }
+        warn(node, "'unsafe' block is deprecated and has no effect\nnote: see issue #N for details. this block will be removed in a future version.", ctx.module_file)
+        check_stmt(node.block, ctx)
       when AsmStmt
-        report(node, "asm requires an unsafe block", ctx.module_file) unless ctx.in_unsafe
+        # inline assembly is allowed everywhere
       when StaticAssertStmt
         check_static_assert(node, ctx)
       when ExprStmt
@@ -979,7 +981,7 @@ module Cinder
       when IndexExpr
         t = infer_expr(target.target, ctx)
         if t.is_a?(PointerType)
-          ctx.in_unsafe
+          true
         else
           writable?(target.target, ctx)
         end
@@ -1063,7 +1065,6 @@ module Cinder
         report(node, "range expression is only allowed in `for` loops and switch patterns", ctx && ctx.module_file)
         UNKNOWN
       when AsmExpr
-        report(node, "asm requires an unsafe block", ctx && ctx.module_file) unless ctx.in_unsafe
         UNKNOWN
       when SizeofExpr
         infer_sizeof(node, ctx)
@@ -1165,10 +1166,6 @@ module Cinder
           PointerType.new(node.line, node.col, elem: t, const: false)
         end
       when "*"
-        unless ctx.in_unsafe
-          report(node, "dereferencing a raw pointer requires an unsafe block", ctx.module_file)
-          return UNKNOWN
-        end
         t = infer_expr(node.operand, ctx)
         if t.is_a?(PointerType)
           if void_type?(t.elem)
@@ -1260,10 +1257,6 @@ module Cinder
     def infer_arith(node, a, b, ctx)
       if a.is_a?(PointerType) || b.is_a?(PointerType)
         return UNKNOWN if a == UNKNOWN || b == UNKNOWN
-        unless ctx.in_unsafe
-          report(node, "pointer arithmetic requires an unsafe block", ctx.module_file)
-          return UNKNOWN
-        end
         if node.op == "+" || node.op == "-"
           if a.is_a?(PointerType) && (int_type?(b) || b == UNKNOWN)
             return a
@@ -1344,25 +1337,8 @@ module Cinder
       src = infer_expr(node.expr, ctx)
       dst = resolve_type(node.type, ctx.module_file)
       return dst if src == UNKNOWN || dst == UNKNOWN
-      if ctx.in_unsafe
-        return dst if cast_supported?(src, dst)
-        report(node, "unsupported cast from #{type_name(src)} to #{type_name(dst)}", ctx.module_file)
-        return dst
-      end
-      if numeric_type?(src) && numeric_type?(dst)
-        return dst
-      end
-      if src.is_a?(PointerType) && dst.is_a?(PointerType)
-        if void_type?(dst.elem) && !void_type?(src.elem)
-          return dst
-        end
-        if equal(src.elem, dst.elem)
-          if (!src.const || dst.const) && (!src.volatile || dst.volatile)
-            return dst
-          end
-        end
-      end
-      report(node, "cast from #{type_name(src)} to #{type_name(dst)} requires an unsafe block", ctx.module_file)
+      return dst if cast_supported?(src, dst)
+      report(node, "unsupported cast from #{type_name(src)} to #{type_name(dst)}", ctx.module_file)
       dst
     end
 
@@ -1409,7 +1385,6 @@ module Cinder
         report(node, "cannot call `#{fn.name}`: it is private to its module", ctx.module_file)
         return UNKNOWN
       end
-      report(node, "call to unsafe function `#{fn.name}` requires an unsafe block", ctx.module_file) if fn.unsafe && !ctx.in_unsafe
       if fn.variadic ? node.args.length < fn.params.length : node.args.length != fn.params.length
         expected = fn.variadic ? "at least #{fn.params.length}" : fn.params.length.to_s
         report(node, "function `#{fn.name}` expects #{expected} argument(s), got #{node.args.length}", ctx.module_file)
@@ -1458,15 +1433,10 @@ module Cinder
       end
       case t
       when ArrayType
-        check_array_bounds(node, t.len_value, node.index, ctx) unless ctx.in_unsafe
         t.elem
       when SliceType
         t.elem
       when PointerType
-        unless ctx.in_unsafe
-          report(node, "pointer indexing requires an unsafe block", ctx.module_file)
-          return UNKNOWN
-        end
         if void_type?(t.elem)
           report(node, "cannot index a void pointer", ctx.module_file)
           return UNKNOWN
@@ -1490,18 +1460,10 @@ module Cinder
       end
       case t
       when ArrayType
-        unless ctx.in_unsafe
-          check_array_bound(node, t.len_value, node.start, ctx) if node.start
-          check_array_bound(node, t.len_value, node.end_, ctx) if node.end_
-        end
         SliceType.new(node.line, node.col, elem: t.elem)
       when SliceType
         SliceType.new(node.line, node.col, elem: t.elem)
       when PointerType
-        unless ctx.in_unsafe
-          report(node, "slicing a pointer requires an unsafe block", ctx.module_file)
-          return UNKNOWN
-        end
         if void_type?(t.elem)
           report(node, "cannot slice a void pointer", ctx.module_file)
           return UNKNOWN
@@ -1838,16 +1800,12 @@ module Cinder
       ctx.loop_depth -= 1
     end
 
-    def with_unsafe(ctx)
-      old = ctx.in_unsafe
-      ctx.in_unsafe = true
-      yield
-    ensure
-      ctx.in_unsafe = old
-    end
-
     def report(node, message, file = nil)
       @reporter.report(file || node.module_file || "<input>", node.line, node.col, message)
+    end
+
+    def warn(node, message, file = nil)
+      @reporter.warn(file || node.module_file || "<input>", node.line, node.col, message)
     end
 
     public

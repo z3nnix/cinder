@@ -34,17 +34,17 @@ class Chip8Test < Minitest::Test
     reporter = ErrorReporter.new
     loader = Loader.new(include_dirs: INCLUDE_DIRS, reporter: reporter) { |p| File.read(p) }
     program = loader.load(file)
-    return [reporter, nil] unless reporter.diagnostics.empty?
+    return [reporter, nil] if reporter.error?
     sema = Sema.new(program, reporter)
     sema.check
-    return [reporter, nil] unless reporter.diagnostics.empty?
+    return [reporter, nil] if reporter.error?
     [reporter, Codegen.new(program, sema).generate]
   end
 
   def run_exit(src)
     skip "toolchain not available" unless TOOLS.length == 3
     reporter, ir = build(src)
-    assert_empty reporter.diagnostics.map(&:to_s), reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s), reporter.diagnostics.select(&:error?).map(&:to_s)
     refute_nil ir
     ll = File.join(@tmp, "main.ll")
     asm = File.join(@tmp, "main.s")
@@ -129,7 +129,7 @@ class Chip8Test < Minitest::Test
           return 0;
       }
     CND
-    assert_empty reporter.diagnostics.map(&:to_s), reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s), reporter.diagnostics.select(&:error?).map(&:to_s)
     refute_nil ir
   end
 
@@ -140,6 +140,6 @@ class Chip8Test < Minitest::Test
     program = loader.load(entry)
     sema = Sema.new(program, reporter)
     sema.check
-    assert_empty reporter.diagnostics.map(&:to_s), reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s), reporter.diagnostics.select(&:error?).map(&:to_s)
   end
 end

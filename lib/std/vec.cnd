@@ -43,9 +43,7 @@ export fn vec_push(v: *Vec, byte: u8) -> bool {
         if v.cap != 0 { new_cap = v.cap * 2; }
         if !vec_reserve(v, new_cap) { return false; }
     }
-    unsafe {
-        v.data[v.len] = byte;
-    }
+    v.data[v.len] = byte;
     v.len += 1;
     return true;
 }
@@ -54,25 +52,19 @@ export fn vec_push(v: *Vec, byte: u8) -> bool {
 export fn vec_pop(v: *Vec) -> ?u8 {
     if v.len == 0 { return none; }
     v.len -= 1;
-    unsafe {
-        return v.data[v.len];
-    }
+    return v.data[v.len];
 }
 
 /// Return the byte at index i. Returns none when out of range.
 export fn vec_get(v: *Vec, i: usize) -> ?u8 {
     if i >= v.len { return none; }
-    unsafe {
-        return v.data[i];
-    }
+    return v.data[i];
 }
 
 /// Set the byte at index i. Returns false when out of range.
 export fn vec_set(v: *Vec, i: usize, byte: u8) -> bool {
     if i >= v.len { return false; }
-    unsafe {
-        v.data[i] = byte;
-    }
+    v.data[i] = byte;
     return true;
 }
 
@@ -83,9 +75,7 @@ export fn vec_len(v: *Vec) -> usize {
 
 /// Return a view of the bytes in v.
 export fn vec_as_slice(v: *Vec) -> []u8 {
-    unsafe {
-        return v.data[0 .. v.len];
-    }
+    return v.data[0 .. v.len];
 }
 
 /// Drop all bytes without freeing the buffer.
@@ -98,10 +88,8 @@ export fn vec_from_slice(s: []u8) -> Vec {
     let mut v: Vec = Vec { data: null, len: 0, cap: 0 };
     if s.len > 0 {
         if vec_reserve(&v, s.len) {
-            unsafe {
-                for i in 0 .. s.len {
-                    v.data[i] = s[i];
-                }
+            for i in 0 .. s.len {
+                v.data[i] = s[i];
             }
             v.len = s.len;
         }

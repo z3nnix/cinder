@@ -35,10 +35,10 @@ class DocsTest < Minitest::Test
     reporter = ErrorReporter.new
     loader = Loader.new(include_dirs: [File.join(ROOT, "lib")], reporter: reporter) { |p| File.read(p) }
     program = loader.load(file)
-    return [false, "load"] unless reporter.diagnostics.empty?
+    return [false, "load"] if reporter.error?
     sema = Sema.new(program, reporter)
     sema.check
-    return [false, "sema"] unless reporter.diagnostics.empty?
+    return [false, "sema"] if reporter.error?
     ir = Codegen.new(program, sema).generate
     [true, ir]
   end

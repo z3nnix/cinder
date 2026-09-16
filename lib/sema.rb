@@ -696,7 +696,7 @@ module Cinder
     def check_fn(decl)
       return unless decl.body
       if decl.unsafe
-        warn(decl, "'unsafe' function is deprecated and has no effect\nnote: see issue #N for details. this will be removed in a future version.")
+        warn(decl, "'unsafe' function is deprecated and has no effect\nnote: see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details. this will be removed in a future version.")
       end
       ctx = Context.new
       ctx.fn = decl
@@ -760,7 +760,7 @@ module Cinder
       when DeferStmt
         check_stmt(node.stmt, ctx)
       when UnsafeBlock
-        warn(node, "'unsafe' block is deprecated and has no effect\nnote: see issue #N for details. this block will be removed in a future version.", ctx.module_file)
+        warn(node, "'unsafe' block is deprecated and has no effect\nnote: see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details. this block will be removed in a future version.", ctx.module_file)
         check_stmt(node.block, ctx)
       when AsmStmt
         # inline assembly is allowed everywhere

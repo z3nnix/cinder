@@ -24,12 +24,10 @@ const SEEK_END: i32 = 2;
 fn path_cstr(path: []u8) -> *u8 {
     let p = alloc(path.len + 1);
     if p == null { return null; }
-    unsafe {
-        for i in 0 .. path.len {
-            p[i] = path[i];
-        }
-        p[path.len] = 0;
+    for i in 0 .. path.len {
+        p[i] = path[i];
     }
+    p[path.len] = 0;
     return p;
 }
 
@@ -57,10 +55,8 @@ export fn file_read_all(path: []u8) -> ?[]u8 {
             return none;
         }
     }
-    unsafe {
-        buf[n] = 0;
-        return buf[..n];
-    }
+    buf[n] = 0;
+    return buf[..n];
 }
 
 /// Write data to path, truncating any existing file. Returns false on failure.

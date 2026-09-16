@@ -43,10 +43,8 @@ export fn string_push_byte(s: *String, b: u8) -> bool {
 export fn string_append(s: *String, t: []u8) -> bool {
     if t.len == 0 { return true; }
     if !vec_reserve(&s.v, s.v.len + t.len) { return false; }
-    unsafe {
-        for i in 0 .. t.len {
-            s.v.data[s.v.len + i] = t[i];
-        }
+    for i in 0 .. t.len {
+        s.v.data[s.v.len + i] = t[i];
     }
     s.v.len += t.len;
     return true;

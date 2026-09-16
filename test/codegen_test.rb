@@ -31,16 +31,16 @@ class CodegenTest < Minitest::Test
     reporter = ErrorReporter.new
     loader = Loader.new(include_dirs: [], reporter: reporter) { |p| File.read(p) }
     program = loader.load(file)
-    return [reporter, nil] unless reporter.diagnostics.empty?
+    return [reporter, nil] if reporter.error?
     sema = Sema.new(program, reporter)
     sema.check
-    return [reporter, nil] unless reporter.diagnostics.empty?
+    return [reporter, nil] if reporter.error?
     [reporter, Codegen.new(program, sema, mode: mode).generate]
   end
 
   def gen_ok(src, mode: :debug)
     reporter, ir = build(src, mode: mode)
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
     ir
   end
 
@@ -52,7 +52,7 @@ class CodegenTest < Minitest::Test
     program = loader.load(file)
     sema = Sema.new(program, reporter)
     sema.check
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
     ir = Codegen.new(program, sema).generate
     ll = File.join(@tmp, "main.ll")
     asm = File.join(@tmp, "main.s")
@@ -426,7 +426,7 @@ class CodegenTest < Minitest::Test
     program = loader.load(file)
     sema = Sema.new(program, reporter, target: "x86_64-freestanding")
     sema.check
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
     ir = Codegen.new(program, sema, target: "x86_64-freestanding").generate
     assert_includes ir, 'target triple = "x86_64-unknown-none-elf"'
     assert_includes ir, "target datalayout"

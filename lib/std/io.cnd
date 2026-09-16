@@ -39,51 +39,33 @@ export enum PrintType {
 ///     print(&b, .Bool);     // b: bool
 /// For Ptr, value is the pointer itself.
 export fn print(value: *void, tag: PrintType) {
-    switch tag {
+switch tag {
         PrintType.S => {
-            unsafe {
-                print_str(value as *[]u8);
-            }
+            print_str(value as *[]u8);
         }
         PrintType.I32 => {
-            unsafe {
-                print_i32(*(value as *i32));
-            }
+            print_i32(*(value as *i32));
         }
-       PrintType.I64 => {
-            unsafe {
-                print_i64(*(value as *i64));
-            }
+        PrintType.I64 => {
+            print_i64(*(value as *i64));
         }
         PrintType.I128 => {
-            unsafe {
-                print_i128(*(value as *i128));
-            }
+            print_i128(*(value as *i128));
         }
         PrintType.F64 => {
-            unsafe {
-                print_f64(*(value as *f64));
-            }
+            print_f64(*(value as *f64));
         }
         PrintType.Bool => {
-            unsafe {
-                print_bool(*(value as *bool));
-            }
+            print_bool(*(value as *bool));
         }
         PrintType.U8 => {
-            unsafe {
-                putchar(*(value as *i32));
-            }
+            putchar(*(value as *i32));
         }
         PrintType.U64 => {
-            unsafe {
-                print_u64(*(value as *u64));
-            }
+            print_u64(*(value as *u64));
         }
         PrintType.U128 => {
-            unsafe {
-                print_u128(*(value as *u128));
-            }
+            print_u128(*(value as *u128));
         }
 
         PrintType.Ptr => print_ptr(value);
@@ -92,10 +74,8 @@ export fn print(value: *void, tag: PrintType) {
 
 /// Write the slice pointed to by s.
 fn print_str(s: *[]u8) {
-    unsafe {
-        let slice: []u8 = *s;
-        write(1, slice.ptr, slice.len);
-    }
+    let slice: []u8 = *s;
+    write(1, slice.ptr, slice.len);
 }
 
 fn print_cstr(s: *u8) {
@@ -165,9 +145,7 @@ fn print_f64(f: f64) {
 /// Print p as `0x` plus lowercase hexadecimal.
 fn print_ptr(p: *void) {
     println("0x");
-    unsafe {
-        print_hex_u64(p as u64);
-    }
+    print_hex_u64(p as u64);
 }
 
 
@@ -211,11 +189,11 @@ export fn read_line(buf: *u8, cap: usize) -> usize {
         if b == '\n' as u8 { break; }
         if b == '\r' as u8 { continue; }
         if len >= cap { break; }
-        unsafe { buf[len] = b; }
+        buf[len] = b;
         len += 1;
     }
     if len < cap {
-        unsafe { buf[len] = 0; }
+        buf[len] = 0;
     }
     return len;
 }

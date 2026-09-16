@@ -8,14 +8,12 @@ export fn fmt_u64(n: u64, buf: *u8, cap: usize) -> usize {
     if cap == 0 { return 0; }
     let mut v: u64 = n;
     let mut i: usize = 0;
-    unsafe {
-        loop {
-            buf[i] = (48 + (v % 10) as u32) as u8;
-            i += 1;
-            v = v / 10;
-            if v == 0 { break; }
-            if i >= cap { break; }
-        }
+    loop {
+        buf[i] = (48 + (v % 10) as u32) as u8;
+        i += 1;
+        v = v / 10;
+        if v == 0 { break; }
+        if i >= cap { break; }
     }
     fmt_reverse(buf, i);
     return i;
@@ -28,13 +26,9 @@ export fn fmt_i64(n: i64, buf: *u8, cap: usize) -> usize {
         return fmt_u64(n as u64, buf, cap);
     }
     if cap < 2 { return 0; }
-    unsafe {
-        buf[0] = '-' as u8;
-    }
+    buf[0] = '-' as u8;
     let mut len: usize = 0;
-    unsafe {
-        len = fmt_u64((0 - n) as u64, buf + 1, cap - 1);
-    }
+    len = fmt_u64((0 - n) as u64, buf + 1, cap - 1);
     return len + 1;
 }
 
@@ -43,14 +37,12 @@ export fn fmt_u128(n: u128, buf: *u8, cap: usize) -> usize {
     if cap == 0 { return 0; }
     let mut v: u128 = n;
     let mut i: usize = 0;
-    unsafe {
-        loop {
-            buf[i] = (48 + (v % 10) as u32) as u8;
-            i += 1;
-            v = v / 10;
-            if v == 0 { break; }
-            if i >= cap { break; }
-        }
+    loop {
+        buf[i] = (48 + (v % 10) as u32) as u8;
+        i += 1;
+        v = v / 10;
+        if v == 0 { break; }
+        if i >= cap { break; }
     }
     fmt_reverse(buf, i);
     return i;
@@ -61,19 +53,17 @@ export fn fmt_hex_u64(n: u64, buf: *u8, cap: usize) -> usize {
     if cap == 0 { return 0; }
     if n == 0 {
         if cap < 1 { return 0; }
-        unsafe { buf[0] = '0' as u8; }
+        buf[0] = '0' as u8;
         return 1;
     }
     let hex: []u8 = "0123456789abcdef";
     let mut v: u64 = n;
     let mut i: usize = 0;
-    unsafe {
-        while v != 0 {
-            buf[i] = hex[(v % 16) as usize];
-            i += 1;
-            v = v / 16;
-            if i >= cap { break; }
-        }
+    while v != 0 {
+        buf[i] = hex[(v % 16) as usize];
+        i += 1;
+        v = v / 16;
+        if i >= cap { break; }
     }
     fmt_reverse(buf, i);
     return i;
@@ -84,19 +74,15 @@ export fn fmt_bool(b: bool, buf: *u8, cap: usize) -> usize {
     if b {
         if cap < 4 { return 0; }
         let s: []u8 = "true";
-        unsafe {
-            for i in 0 .. 4 {
-                buf[i] = s[i];
-            }
+        for i in 0 .. 4 {
+            buf[i] = s[i];
         }
         return 4;
     }
     if cap < 5 { return 0; }
     let s: []u8 = "false";
-    unsafe {
-        for i in 0 .. 5 {
-            buf[i] = s[i];
-        }
+    for i in 0 .. 5 {
+        buf[i] = s[i];
     }
     return 5;
 }
@@ -104,18 +90,12 @@ export fn fmt_bool(b: bool, buf: *u8, cap: usize) -> usize {
 // Write p as "0x" plus lowercase hexadecimal. Returns the number of bytes written.
 export fn fmt_ptr(p: *u8, buf: *u8, cap: usize) -> usize {
     if cap < 3 { return 0; }
-    unsafe {
-        buf[0] = '0' as u8;
-        buf[1] = 'x' as u8;
-    }
+    buf[0] = '0' as u8;
+    buf[1] = 'x' as u8;
     let mut a: u64 = 0;
-    unsafe {
-        a = p as u64;
-    }
+    a = p as u64;
     let mut len: usize = 0;
-    unsafe {
-        len = fmt_hex_u64(a, buf + 2, cap - 2);
-    }
+    len = fmt_hex_u64(a, buf + 2, cap - 2);
     return len + 2;
 }
 
@@ -123,13 +103,11 @@ export fn fmt_ptr(p: *u8, buf: *u8, cap: usize) -> usize {
 fn fmt_reverse(buf: *u8, len: usize) {
     let mut a: usize = 0;
     let mut b: usize = len;
-    unsafe {
-        while a < b {
-            b -= 1;
-            let t = buf[a];
-            buf[a] = buf[b];
-            buf[b] = t;
-            a += 1;
-        }
+    while a < b {
+        b -= 1;
+        let t = buf[a];
+        buf[a] = buf[b];
+        buf[b] = t;
+        a += 1;
     }
 }

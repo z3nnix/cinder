@@ -45,7 +45,7 @@ class ExternTest < Minitest::Test
     program = loader.load(file)
     sema = Sema.new(program, reporter)
     sema.check
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
     Codegen.new(program, sema).generate
   end
 
@@ -58,7 +58,7 @@ class ExternTest < Minitest::Test
     program = loader.load(file)
     sema = Sema.new(program, reporter)
     sema.check
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
     ir = Codegen.new(program, sema).generate
     ll = File.join(@tmp, "main.ll")
     asm = File.join(@tmp, "main.s")
@@ -76,12 +76,12 @@ class ExternTest < Minitest::Test
 
   def test_extern_declaration_needs_no_body
     r = check("extern fn write(fd: i32, buf: *u8, count: usize) -> isize;\nfn main() -> i32 { return 0; }\n")
-    assert_empty r.diagnostics.map(&:to_s)
+    assert_empty r.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def test_extern_call_allowed_outside_unsafe
     r = check("extern fn foo(x: i32) -> i32;\nfn main() -> i32 { return foo(3); }\n")
-    assert_empty r.diagnostics.map(&:to_s)
+    assert_empty r.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def test_extern_missing_body_error
@@ -92,7 +92,7 @@ class ExternTest < Minitest::Test
 
   def test_variadic_extra_args_allowed
     r = check("extern fn printf(fmt: *u8, ...) -> i32;\nfn main() -> i32 { printf(c\"%d\", 1, 2, 3); return 0; }\n")
-    assert_empty r.diagnostics.map(&:to_s)
+    assert_empty r.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def test_variadic_too_few_args_error
@@ -109,7 +109,7 @@ class ExternTest < Minitest::Test
 
   def test_stdlib_exported_print_callable
     r = check("use \"std/io.cnd\";\nfn main() -> i32 { println(\"hi\"); return 0; }\n")
-    assert_empty r.diagnostics.map(&:to_s)
+    assert_empty r.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def test_stdlib_private_write_not_callable

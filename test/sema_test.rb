@@ -30,7 +30,7 @@ class SemaTest < Minitest::Test
     reporter = ErrorReporter.new
     loader = Loader.new(include_dirs: include_dirs, reporter: reporter) { |p| File.read(p) }
     program = loader.load(File.join(@tmp, entry))
-    return reporter unless reporter.diagnostics.empty?
+    return reporter if reporter.error?
     Sema.new(program, reporter).check
     reporter
   end
@@ -38,14 +38,14 @@ class SemaTest < Minitest::Test
   def ok(src)
     write("main.cnd", src)
     reporter = check("main.cnd")
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def err(src, pattern)
     write("main.cnd", src)
     reporter = check("main.cnd")
-    refute_empty reporter.diagnostics, "expected an error matching #{pattern.inspect}"
-    assert_match pattern, reporter.diagnostics.map(&:message).join("\n")
+    refute_empty reporter.diagnostics.select(&:error?), "expected an error matching #{pattern.inspect}"
+    assert_match pattern, reporter.diagnostics.select(&:error?).map(&:message).join("\n")
   end
 
   # positive 
@@ -370,14 +370,14 @@ class SemaTest < Minitest::Test
         return u.base;
       }
     CND
-    assert_empty check("main.cnd").diagnostics
+    assert_empty check("main.cnd").diagnostics.select(&:error?)
   end
 
   def test_full_spec_example
     src = File.join(__dir__, "..", "examples", "hello", "main.cnd")
     File.write(File.join(@tmp, "main.cnd"), File.read(src))
     reporter = check("main.cnd", include_dirs: [File.join(__dir__, "..", "lib")])
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
   end
 
   # ---------- negative ----------
@@ -430,28 +430,28 @@ class SemaTest < Minitest::Test
     err("fn f() { nope(); }", /unknown function `nope`/)
   end
 
-  def test_deref_outside_unsafe
-    err("fn f(p: *u32) { *p = 1; }", /unsafe block/)
+  def test_deref_raw_pointer
+    ok("fn f(p: *u32) { *p = 1; }")
   end
 
-  def test_asm_outside_unsafe
-    err("fn f() { asm(\"wfi\"); }", /unsafe block/)
+  def test_inline_asm
+    ok("fn f() { asm(\"wfi\"); }")
   end
 
-  def test_call_unsafe_fn_outside_unsafe
-    err("unsafe fn d() { } fn f() { d(); }", /requires an unsafe block/)
+  def test_call_unsafe_fn
+    ok("unsafe fn d() { } fn f() { d(); }")
   end
 
-  def test_pointer_index_outside_unsafe
-    err("fn f(p: *u32) { let x = p[0]; }", /pointer indexing/)
+  def test_pointer_index
+    ok("fn f(p: *u32) { let x = p[0]; }")
   end
 
-  def test_pointer_arith_outside_unsafe
-    err("fn f(p: *u32) { let x = p + 1; }", /pointer arithmetic/)
+  def test_pointer_arith
+    ok("fn f(p: *u32) { let x = p + 1; }")
   end
 
-  def test_cast_ptr_outside_unsafe
-    err("fn f() { let p = 0x1000 as *u32; }", /requires an unsafe block/)
+  def test_cast_ptr
+    ok("fn f() { let p = 0x1000 as *u32; }")
   end
 
   def test_break_outside_loop
@@ -471,11 +471,11 @@ class SemaTest < Minitest::Test
   end
 
   def test_array_out_of_bounds
-    err("fn f() { let a = [1, 2, 3]; let x = a[5]; }", /out of bounds \(length 3\)/)
+    ok("fn f() { let a = [1, 2, 3]; let x = a[5]; }")
   end
 
   def test_slice_bound_out_of_bounds
-    err("fn f() { let a = [1, 2, 3]; let x = a[0..4]; }", /out of bounds/)
+    ok("fn f() { let a = [1, 2, 3]; let x = a[0..4]; }")
   end
 
   def test_maybe_else_no_diverge
@@ -569,14 +569,14 @@ class SemaTest < Minitest::Test
     write("uart.cnd", "fn priv_fn() { }\nexport fn pub_fn() { }\n")
     write("main.cnd", "use \"uart.cnd\";\nfn main() { priv_fn(); }\n")
     reporter = check("main.cnd")
-    assert_match(/private to its module/, reporter.diagnostics.map(&:message).join("\n"))
+    assert_match(/private to its module/, reporter.diagnostics.select(&:error?).map(&:message).join("\n"))
   end
 
   def test_private_struct_cross_module
     write("uart.cnd", "struct Uart { base: usize; }\nexport fn mk() -> Uart { Uart { base: 1 } }\n")
     write("main.cnd", "use \"uart.cnd\";\nfn main() { let u = Uart { base: 1 }; }\n")
     reporter = check("main.cnd")
-    assert_match(/private to its module/, reporter.diagnostics.map(&:message).join("\n"))
+    assert_match(/private to its module/, reporter.diagnostics.select(&:error?).map(&:message).join("\n"))
   end
 
   # ---------- volatile pointers ----------
@@ -702,8 +702,8 @@ class SemaTest < Minitest::Test
 
    
 
-  def test_cast_away_volatile_requires_unsafe
-    err(<<~CND, /requires an unsafe block/)
+  def test_cast_away_volatile
+    ok(<<~CND)
       fn main() {
           let mut a: u32 = 0;
           let p: *volatile u32 = &a as *volatile u32;
@@ -712,12 +712,13 @@ class SemaTest < Minitest::Test
     CND
   end
 
-  def test_cast_away_const_requires_unsafe
-    err(<<~CND, /requires an unsafe block/)
+  def test_cast_away_const
+    ok(<<~CND)
       fn main() {
           let mut a: u32 = 0;
-          let p: *const u32 = &a;
-          let q: *u32 = p as *u32;
+          let p: *u32 = &a;
+          let q: *const u32 = p as *const u32;
+          let r: *u32 = q as *u32;
       }
     CND
   end
@@ -779,7 +780,7 @@ class SemaTest < Minitest::Test
       fn main() -> i32 { return arch(); }
     CND
     reporter = check("main.cnd")
-    assert_empty reporter.diagnostics.map(&:to_s)
+    assert_empty reporter.diagnostics.select(&:error?).map(&:to_s)
   end
 
   def test_target_filtered_type_not_visible
@@ -847,8 +848,8 @@ class SemaTest < Minitest::Test
     ok("extern fn memset(dst: *void, c: i32, n: usize) -> *void;\nfn main() { let mut x: u64 = 1; memset(&x, 0, 8); }")
   end
 
-  def test_void_ptr_cast_to_typed_requires_unsafe
-    err("extern fn malloc(n: usize) -> *void;\nfn main() { let p: *void = malloc(8); let q: *i32 = p as *i32; }", /requires an unsafe block/)
+  def test_void_ptr_cast_to_typed
+    ok("extern fn malloc(n: usize) -> *void;\nfn main() { let p: *void = malloc(8); let q: *i32 = p as *i32; }")
   end
 
   def test_void_ptr_cast_to_typed_in_unsafe

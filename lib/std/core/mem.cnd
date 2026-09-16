@@ -1,21 +1,17 @@
 //! Cinder stdlib: memory (core).
-//! Raw memory helpers. The pointer work is unsafe internally.
+//! Raw memory helpers.
 
 /// Set n bytes at dst to value.
 export fn mem_fill(dst: *u8, value: u8, n: usize) {
-    unsafe {
-        for i in 0 .. n {
-            dst[i] = value;
-        }
+    for i in 0 .. n {
+        dst[i] = value;
     }
 }
 
 /// Copy n bytes from src to dst. dst and src must not overlap.
 export fn mem_copy(dst: *u8, src: *u8, n: usize) {
-    unsafe {
-        for i in 0 .. n {
-            dst[i] = src[i];
-        }
+    for i in 0 .. n {
+        dst[i] = src[i];
     }
 }
 
@@ -24,21 +20,17 @@ export fn mem_move(dst: *u8, src: *u8, n: usize) {
     if dst == src { return; }
     let mut da: u64 = 0;
     let mut sa: u64 = 0;
-    unsafe {
-        da = dst as u64;
-        sa = src as u64;
-    }
+    da = dst as u64;
+    sa = src as u64;
     if da < sa {
-        unsafe {
-            for i in 0 .. n {
-                dst[i] = src[i];
-            }
+        for i in 0 .. n {
+            dst[i] = src[i];
         }
     } else {
         let mut i: usize = n;
         while i > 0 {
             i -= 1;
-            unsafe { dst[i] = src[i]; }
+            dst[i] = src[i];
         }
     }
 }

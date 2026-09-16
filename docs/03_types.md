@@ -168,13 +168,11 @@ fn main() -> i32 {
     println(raw);
 
     let mut i: usize = 0;
-    unsafe {
-        loop {
-            let ch = cstr[i];
-            if ch == 0 { break; }
-            putchar(ch as i32);
-            i += 1;
-        }
+    loop {
+        let ch = cstr[i];
+        if ch == 0 { break; }
+        putchar(ch as i32);
+        i += 1;
     }
     putchar(10);
 

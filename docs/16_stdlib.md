@@ -147,14 +147,12 @@ use "std/alloc.cnd";
 fn main() -> i32 {
     let p = alloc(16);
     if p == null { return 1; }
-    unsafe {
-        p[0] = 65;
-        p[1] = 66;
-        p[2] = 67;
-        p[3] = 0;
-        let slice = p[..3];
-        print(&slice, .S);
-    }
+    p[0] = 65;
+    p[1] = 66;
+    p[2] = 67;
+    p[3] = 0;
+    let slice = p[..3];
+    print(&slice, .S);
     putchar(10);
     dealloc(p);
     return 0;
@@ -177,10 +175,8 @@ use "std/io.cnd";
 use "std/core/str.cnd";
 
 fn cstr_slice(p: *u8) -> []u8 {
-    unsafe {
-        let len = strlen(p);
-        return p[..len];
-    }
+    let len = strlen(p);
+    return p[..len];
 }
 
 fn main(argc: i32, argv: **u8) -> i32 {
@@ -188,9 +184,7 @@ fn main(argc: i32, argv: **u8) -> i32 {
     print(&n, .I32);
     putchar(10);
     for i in 1 .. argc {
-        unsafe {
-            println(cstr_slice(argv[i as usize]));
-        }
+        println(cstr_slice(argv[i as usize]));
     }
     return 0;
 }
@@ -218,7 +212,7 @@ fn main() -> i32 {
     if !file_write_all(path, "hello file") { return 1; }
     let data = file_read_all(path) else { return 2; };
     println(data);
-    unsafe { dealloc(data.ptr); }
+    dealloc(data.ptr);
     return 0;
 }
 ```

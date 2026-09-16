@@ -37,7 +37,7 @@ not positive
 ## Parameters
 
 Parameters are read-only. Pass by value; pass a pointer to mutate the caller's
-value (see [Pointers](12_pointers_unsafe.md)).
+value (see [Pointers](12_pointers.md)).
 
 ```rust
 fn scale(v: i32, k: i32) -> i32 {
@@ -107,33 +107,13 @@ positive
 
 ## unsafe fn
 
-A function may itself be marked `unsafe`. Its body is treated as an `unsafe`
-block, and every call site must be inside `unsafe`.
+`unsafe fn` is deprecated and has no effect. The `unsafe` keyword before `fn`
+is accepted for compatibility, but the function body and every call site behave
+like any other function. The construct will be removed in a future version.
 
 ```rust
-use "std/io.cnd";
-
+// docs: error-skip
 unsafe fn peek(v: *u32) -> u32 {
     return *v;
 }
-
-fn main() -> i32 {
-    let secret: u32 = 42;
-    unsafe {
-        let got = peek(&secret);
-
-        let label: []u8 = "peek = ";
-        print(&label, .S);
-
-        let v: i32 = got as i32;
-        print(&v, .I32);
-        putchar(10);
-    }
-    return 0;
-}
-```
-
-```text
-$ ./unsafe_fn
-peek = 42
 ```

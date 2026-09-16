@@ -1,7 +1,7 @@
 # Cinder by Example
 
 Cinder is a small systems language with C compatibility, `?T` optionals,
-`!T` errors, slices, `defer`, explicit `unsafe`, and an LLVM backend.
+`!T` errors, slices, and an LLVM backend.
 
 This guide teaches Cinder through complete, runnable programs.
 Each page shows a program and its output.
@@ -19,7 +19,7 @@ Each page shows a program and its output.
 9. [Optionals and Errors](09_optionals_errors.md)
 10. [defer](10_defer.md)
 11. [Compile-Time Code](11_compile_time.md)
-12. [Pointers and unsafe](12_pointers_unsafe.md)
+12. [Pointers](12_pointers.md)
 13. [Function Pointers](13_function_pointers.md)
 14. [Calling C: extern and FFI](14_extern_ffi.md)
 15. [Modules](15_modules.md)

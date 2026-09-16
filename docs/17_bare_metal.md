@@ -50,7 +50,7 @@ SECTIONS {
 ```rust
 use "std/x86.cnd";
 
-unsafe fn uart_init() {
+fn uart_init() {
     outb(0x3F9, 0x00);
     outb(0x3FB, 0x80);
     outb(0x3F8, 0x03);
@@ -58,26 +58,24 @@ unsafe fn uart_init() {
     outb(0x3FB, 0x03);
 }
 
-unsafe fn uart_write_byte(b: u8) {
+fn uart_write_byte(b: u8) {
     while (inb(0x3FD) & 0x20) == 0 {
         asm("nop");
     }
     outb(0x3F8, b);
 }
 
-unsafe fn uart_write_str(s: []u8) {
+fn uart_write_str(s: []u8) {
     for i in 0 .. s.len {
         uart_write_byte(s[i]);
     }
 }
 
 export fn kernel_main() {
-    unsafe {
-        uart_init();
-        uart_write_str("Hello world!\n");
-        loop {
-            asm("hlt");
-        }
+    uart_init();
+    uart_write_str("Hello world!\n");
+    loop {
+        asm("hlt");
     }
 }
 ```
@@ -99,7 +97,7 @@ name.
 ## What works on bare metal
 
 - `outb` / `outw` / `outl` / `inb` / `inw` / `inl` - `std/x86.cnd`
-- `asm("...")` - inline assembly in `unsafe` blocks
+- `asm("...")` - inline assembly
 - All scalar types, structs, enums, arrays, slices, and function pointers
 - `const`, `static`, and compile-time operators
 - No `io` prints, no `alloc`, no `vec` / `string` (these need libc)
@@ -110,6 +108,6 @@ the freestanding target:
 ```rust
 #[target("x86_64-freestanding")]
 fn uart_putc(c: u8) {
-    unsafe { outb(0x3F8, c); }
+    outb(0x3F8, c);
 }
 ```

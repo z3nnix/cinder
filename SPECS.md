@@ -31,7 +31,7 @@ The compiler has no macros and no templates.
 | Explicitness | The code does what it says. There is no hidden behavior. |
 | C compatibility | The syntax is close to C. The unsafe parts of C are removed. |
 | Bare metal | There is no runtime. There is no hidden dependency. |
-| Safety | Static analysis runs outside `unsafe` blocks. Optional types replace NULL. |
+| Safety | Static analysis covers the whole program. Optional types replace NULL. |
 | Fast compilation | There are no macros and no templates. |
 | LLVM IR | The compiler emits LLVM IR. LLVM optimizes the IR. |
 
@@ -47,6 +47,8 @@ The keyword list is:
 as break const continue defer else enum extern fn for if let loop mut
 return switch unsafe use while volatile
 ```
+
+The word `unsafe` is deprecated and will be removed in a future version.
 
 The word `static` is a contextual keyword.
 The word `struct` is a contextual keyword.
@@ -281,13 +283,12 @@ let b: *volatile u32 = ...;     // volatile access
 let c: *const volatile u32 = ...;
 ```
 
-Pointer arithmetic requires an `unsafe` block.
-Dereferencing a raw pointer requires an `unsafe` block.
+Pointer arithmetic and dereferencing a raw pointer are always available.
 
 The type `*void` is a pointer to an unknown type.
 A pointer to a concrete type coerces implicitly to `*void`.
 A `*void` value cannot be dereferenced, indexed, or sliced.
-Converting `*void` back to a concrete pointer type requires an `unsafe` cast.
+A cast converts `*void` back to a concrete pointer type.
 
 ```cinder
 extern fn memset(dst: *void, c: i32, n: usize) -> *void;
@@ -296,9 +297,7 @@ fn main() {
     let mut buf: [8]u8 = [0; 8];
     memset(&buf, 0, 8);                 // [8]u8 coerces to *void
     let p: *void = malloc(16) else { return; };
-    unsafe {
-        let q: *i32 = p as *i32;        // *void -> *i32 requires unsafe
-    }
+    let q: *i32 = p as *i32;            // *void -> *i32 cast
 }
 ```
 
@@ -459,23 +458,16 @@ fn square(a: i32) -> i32 {
 
 ### 7.3 unsafe fn
 
-The keyword `unsafe` before `fn` declares an unsafe function.
-An unsafe function body has the rights of an `unsafe` block.
-An unsafe function must be called from an `unsafe` context.
-
-```cinder
-unsafe fn dangerous() {
-    let ptr = 0x40001000 as *u32;
-    *ptr = 1;
-}
-```
+The keyword `unsafe` before `fn` is deprecated and has no effect.
+It is accepted for compatibility, but the function body behaves like any
+other function. The construct will be removed in a future version.
 
 ### 7.4 extern fn
 
 The keyword `extern` before `fn` declares an external function.
 An external function has no body.
 The linker resolves the external function by name.
-A call to an external function does not require `unsafe`.
+A call to an external function is a plain call.
 
 ```cinder
 extern fn exit(code: i32);
@@ -518,7 +510,7 @@ fn inline add_small(a: u8, b: u8) -> u8 inline {
 }
 
 fn irq_handler() naked {
-    unsafe { asm("push rdi"); }
+    asm("push rdi");
 }
 
 fn panic() noreturn {
@@ -578,13 +570,10 @@ let b = 3.14 as i32;
 let c = 7 as u8;
 ```
 
-Cinder supports safe numeric casts outside `unsafe`.
-Other casts are allowed inside `unsafe`.
+Cinder supports numeric casts and pointer casts with `as`.
 
 ```cinder
-unsafe {
-    let reg = 0x40001000 as *u32;
-}
+let reg = 0x40001000 as *u32;
 ```
 
 ### 8.3 Indexing and Slicing
@@ -597,7 +586,6 @@ let b = s[1];
 ```
 
 A constant index outside the array length is an error.
-A constant out-of-bounds index is an error outside `unsafe`.
 
 ```cinder
 let x = arr[9];         // error when arr has length 3
@@ -949,43 +937,14 @@ let result = read_sensor() else {
 
 ---
 
-## 15. unsafe and asm
-
-### 15.1 unsafe
-
-The `unsafe` block allows unsafe operations.
-The compiler checks safety outside `unsafe`.
-
-| Operation | outside `unsafe` | inside `unsafe` |
-|-----------|------------------|-----------------|
-| Constant array index out of bounds | error | allowed |
-| Uninitialized variable | error | error |
-| Pointer arithmetic | error | allowed |
-| Dereference of a raw pointer | error | allowed |
-| Inline assembly | error | allowed |
-| Unsafe casts | error | allowed |
-
-```cinder
-unsafe {
-    let reg = 0x40001000 as *u32;
-    *reg = 0xDEADBEEF;
-    let p = (0xB8000 + 0x14) as *u16;
-    *p = 0x0F20;
-    asm("wfi");
-}
-```
-
-### 15.2 Inline Assembly
+## 15. Inline Assembly
 
 The `asm` expression runs inline assembly.
-The `asm` expression requires an `unsafe` context.
 
 ```cinder
-unsafe {
-    asm("nop");
-    asm("wfi");
-    asm("hlt");
-}
+asm("nop");
+asm("wfi");
+asm("hlt");
 ```
 
 ---
@@ -1167,7 +1126,6 @@ The module `std/x86.cnd` provides port I/O:
 | slice | a view into an array, a pointer and a length |
 | static | a global variable with one instance |
 | target | a machine architecture for code generation |
-| unsafe | code with unchecked operations |
 
 ---
 
@@ -1181,6 +1139,6 @@ The module `std/x86.cnd` provides port I/O:
 | NULL | yes | `?T` optional types |
 | errno | yes | `!T` error types |
 | Safe strings | no | `[]u8` |
-| Explicit unsafe | no | yes |
+| Raw pointers | yes | yes |
 | Macros | yes | no |
 | Generics | no | no |

@@ -86,10 +86,8 @@ enum IoError {
 ## Enums are plain values
 
 An enum value is stored as its variant index. Use `switch` to branch.
-Converting an enum to its index is an unsafe cast:
+Converting an enum to its index is a plain cast:
 
 ```rust
-unsafe {
-    let idx = Color.Blue as i32;   // 2
-}
+let idx = Color.Blue as i32;   // 2
 ```

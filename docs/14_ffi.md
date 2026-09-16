@@ -53,7 +53,7 @@ $ ./cstr
 ## Pointers and memory
 
 C functions that return allocations come back as raw pointers. Dereferencing
-and indexing them is `unsafe`.
+and indexing them is always available.
 
 ```rust
 use "std/io.cnd";
@@ -63,14 +63,12 @@ extern fn free(p: *u8);
 
 fn main() -> i32 {
     let p = malloc(64);
-    unsafe {
-        p[0] = 65;
-        p[1] = 66;
-        p[2] = 67;
-        p[3] = 0;
-        let slice = p[..3];
-        print(&slice, .S);
-    }
+    p[0] = 65;
+    p[1] = 66;
+    p[2] = 67;
+    p[3] = 0;
+    let slice = p[..3];
+    print(&slice, .S);
     putchar(10);
     free(p);
     return 0;

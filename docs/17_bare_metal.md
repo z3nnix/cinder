@@ -1,6 +1,6 @@
 # Bare Metal
 
-`--emit=kernel` builds a freestanding ELF with no libc. The standard library
+`--emit=freestanding` builds a freestanding ELF with no libc. The standard library
 splits into hosted modules (`io`, `vec`, `alloc`, ...) and a bare-metal
 module (`std/x86.cnd`) for port I/O.
 
@@ -83,7 +83,7 @@ export fn kernel_main() {
 ## Build and run
 
 ```bash
-ruby main.rb build main.cnd --emit=kernel \
+ruby main.rb build main.cnd --emit=freestanding \
     --boot=boot.s \
     --linker-script=linker.ld \
     -o kernel

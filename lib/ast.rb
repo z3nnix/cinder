@@ -43,7 +43,7 @@ module Cinder
     end
 
     class StructDecl < Node
-      attr_accessor :name, :fields, :exported, :target
+      attr_accessor :name, :fields, :exported, :target, :packed
     end
 
     class EnumDecl < Node
@@ -263,7 +263,7 @@ module Cinder
     end
 
     class AsmExpr < Expr
-      attr_accessor :asm_string
+      attr_accessor :asm_string, :inputs, :outputs
     end
 
     class SizeofExpr < Expr

@@ -68,6 +68,10 @@ module Cinder
             decls << parse_top_decl(exported: true)
           when "struct"
             decls << parse_struct(exported: false)
+          when "packed"
+            advance
+            error("expected `struct` after `packed`") unless at?(:ident) && peek.value == "struct"
+            decls << parse_struct(exported: false, packed: true)
           when "static_assert"
             decls << parse_static_assert
           else
@@ -167,6 +171,9 @@ module Cinder
           parse_static(exported: exported)
         elsif peek.value == "struct"
           parse_struct(exported: exported, target: target)
+        elsif peek.value == "packed" && peek(1).value == "struct"
+          advance
+          parse_struct(exported: exported, packed: true, target: target)
         else
           error("unexpected token after attribute/export")
         end
@@ -225,7 +232,7 @@ module Cinder
       str
     end
 
-    def parse_struct(exported:, target: nil)
+    def parse_struct(exported:, target: nil, packed: false)
       tok = expect(:ident, "expected `struct`")
       error("expected `struct`") unless tok.value == "struct"
       name = expect_ident
@@ -243,7 +250,7 @@ module Cinder
           error("expected `;` after struct field")
         end
       end
-      StructDecl.new(tok.line, tok.col, name: name, fields: fields, exported: exported, target: target)
+      StructDecl.new(tok.line, tok.col, name: name, fields: fields, exported: exported, target: target, packed: packed)
     end
 
     def parse_enum(exported:, target: nil)
@@ -848,11 +855,26 @@ module Cinder
         if at?(:lparen)
           advance
           str = expect(:string, "expected asm string").value.first
-          if at?(:colon) && peek(1).type == :colon
-            error("extended asm syntax is not supported yet")
+          outputs = []
+          inputs = []
+          if accept?(:colon)
+            unless at?(:rparen) || at?(:colon)
+              loop do
+                outputs << parse_asm_operand
+                break unless accept?(:comma)
+              end
+            end
+            if accept?(:colon)
+              unless at?(:rparen)
+                loop do
+                  inputs << parse_asm_operand
+                  break unless accept?(:comma)
+                end
+              end
+            end
           end
           expect(:rparen, "expected `)`")
-          return AsmExpr.new(tok.line, tok.col, asm_string: str)
+          return AsmExpr.new(tok.line, tok.col, asm_string: str, inputs: inputs, outputs: outputs)
         end
       when "sizeof"
         return SizeofExpr.new(tok.line, tok.col, type_node: parse_type_parens)
@@ -889,6 +911,14 @@ module Cinder
       end
 
       VarExpr.new(tok.line, tok.col, name: tok.value)
+    end
+
+    def parse_asm_operand
+      constraint = expect(:string, "expected asm constraint string").value.first
+      expect(:lparen, "expected `(` after constraint")
+      expr = parse_expression
+      expect(:rparen, "expected `)`")
+      { constraint: constraint, expr: expr }
     end
 
     def parse_if_expr

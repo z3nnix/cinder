@@ -678,11 +678,78 @@ class CodegenTest < Minitest::Test
     CND
   end
 
+  def test_packed_struct_ir
+    ir = gen_ok(<<~CND)
+      packed struct Hdr { tag: u8; size: u32; }
+      fn main() -> i32 {
+          let sz: usize = sizeof(struct Hdr);
+          let al: usize = alignof(struct Hdr);
+          let off: usize = offsetof(struct Hdr, size);
+          return (sz + al + off) as i32;
+      }
+    CND
+    assert_ir_includes ir, "%struct.Hdr = type <{ i8, i32 }>", "i64 5", "i64 1", "i64 1"
+  end
+
+  def test_packed_struct_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      packed struct Hdr { tag: u8; size: u32; }
+      fn main() -> i32 {
+          let h: [2]Hdr = [Hdr { tag: 1, size: 10 }, Hdr { tag: 2, size: 20 }];
+          if sizeof(struct Hdr) != 5 { return 1; }
+          if alignof(struct Hdr) != 1 { return 2; }
+          if offsetof(struct Hdr, size) != 1 { return 3; }
+          if h[1].size != 20 { return 4; }
+          return 0;
+      }
+    CND
+  end
+
   # ---------- void pointers ----------
 
   def test_void_ptr_coerce_ir
     ir = gen_ok("extern fn memset(dst: *void, c: i32, n: usize) -> *void;\nfn main() { let mut x: u64 = 1; memset(&x, 0, 8); }")
     assert_ir_includes ir, "declare ptr @memset(ptr, i32, i64)", "call ptr (ptr, i32, i64) @memset(ptr %p.x.1"
+  end
+
+  def test_asm_with_operands_ir
+    ir = gen_ok(<<~CND)
+      fn main() -> i32 {
+          let mut v: i64 = 40;
+          asm("addq $1, $0" : "=r"(v) : "r"(2i64));
+          return v as i32;
+      }
+    CND
+    assert_ir_includes ir, "call i64 asm sideeffect \"addq $1, $0\", \"=r,r\"(i64 2)"
+  end
+
+  def test_asm_with_operands_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      fn main() -> i32 {
+          let mut v: i64 = 0;
+          asm("movq $1, $0" : "=r"(v) : "r"(42i64));
+          if v != 42 { return 1; }
+          return 0;
+      }
+    CND
+  end
+
+  def test_asm_inputs_only_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit(<<~CND)
+      fn main() -> i32 {
+          let v: i64 = 1;
+          asm("nop" : : "r"(v));
+          return 0;
+      }
+    CND
+  end
+
+  def test_asm_basic_run
+    skip "toolchain not available" unless (TOOLS & %w[llc as cc]).length == 3
+    assert_equal 0, run_exit("fn main() -> i32 {\n    asm(\"nop\");\n    return 0;\n}\n")
   end
 
   # ---------- evaluation ----------

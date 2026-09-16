@@ -95,7 +95,8 @@ module Cinder
       @structs.each_value do |s|
         next unless target_ok?(s)
         fields = s.fields.map { |f| llvm_type(f.type) }.join(", ")
-        @out << "#{struct_name(s.name)} = type { #{fields} }"
+        body = s.packed ? "<{ #{fields} }>" : "{ #{fields} }"
+        @out << "#{struct_name(s.name)} = type #{body}"
       end
     end
 
@@ -831,11 +832,34 @@ module Cinder
       when SizeofExpr, AlignofExpr, OffsetofExpr
         int_const(node.value, "usize")
       when AsmExpr
-        emit("call void asm sideeffect \"#{asm_string(node.asm_string)}\", \"\"()")
-        "void"
+        gen_asm_expr(node)
       else
         "void"
       end
+    end
+
+    def gen_asm_expr(node)
+      if node.outputs.empty?
+        args = node.inputs.map { |o| asm_operand_arg(o) }
+        cons = node.inputs.map { |o| o[:constraint] }.join(",")
+        emit("call void asm sideeffect \"#{asm_string(node.asm_string)}\", \"#{cons}\"(#{args.join(", ")})")
+        return "void"
+      end
+
+      out = node.outputs[0]
+      rt = llvm_type(out[:sema_type])
+      args = node.inputs.map { |o| asm_operand_arg(o) }
+      cons = [out[:constraint], *node.inputs.map { |o| o[:constraint] }].join(",")
+      res = instr("call #{rt} asm sideeffect \"#{asm_string(node.asm_string)}\", \"#{cons}\"(#{args.join(", ")})")
+      addr = gen_addr(out[:expr])
+      emit("store #{rt} #{res}, ptr #{addr}") if addr
+      res
+    end
+
+    def asm_operand_arg(o)
+      e = o[:expr]
+      t = e.sema_type
+      "#{llvm_type(t)} #{gen_as(e, t)}"
     end
 
     def gen_as(node, expected)

@@ -178,4 +178,23 @@ Inline assembly is always available.
 asm("wfi");
 ```
 
+### Operands
+
+Outputs come after the first `:`; inputs after the second.
+Constraints are quoted strings; `=` marks a write-only output.
+
+The output must be a mutable variable, pointer dereference, or index expression.
+
+```rust
+let mut out: u64 = 0;
+asm("movq $1, $0" : "=r"(out) : "r"(42u64));
+
+let mut a: i32 = 10;
+let mut b: i32 = 20;
+let mut sum: i32 = 0;
+asm("addl $1, $2, $0" : "=r"(sum) : "r"(a), "r"(b));
+```
+
+The result of the expression is the output value.
+
 See [Bare Metal](17_bare_metal.md) for how this is used in a kernel.

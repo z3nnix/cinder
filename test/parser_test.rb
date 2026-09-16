@@ -277,6 +277,31 @@ class ParserTest < Minitest::Test
     assert_instance_of IfStmt, stmts[1].stmt
   end
 
+  def test_asm_with_operands
+    prog = parse_ok('fn f() { asm("addl $2, $1, $0" : "=r"(out) : "r"(a), "r"(b)); }')
+    expr = prog.decls[0].body.stmts[0].expr
+    assert_instance_of AsmExpr, expr
+    assert_equal "addl $2, $1, $0", expr.asm_string
+    assert_equal 1, expr.outputs.length
+    assert_equal "=r", expr.outputs[0][:constraint]
+    assert_instance_of VarExpr, expr.outputs[0][:expr]
+    assert_equal 2, expr.inputs.length
+    assert_equal "r", expr.inputs[0][:constraint]
+    assert_equal "r", expr.inputs[1][:constraint]
+  end
+
+  def test_asm_without_operands
+    prog = parse_ok('fn f() { asm("wfi"); }')
+    expr = prog.decls[0].body.stmts[0].expr
+    assert_instance_of AsmExpr, expr
+    assert_equal [], expr.outputs
+    assert_equal [], expr.inputs
+  end
+
+  def test_asm_missing_constraint
+    assert_parse_error('fn f() { asm("" : (x)); }', /expected asm constraint string/)
+  end
+
   def test_unsafe_block
     prog = parse_ok(<<~CND)
       fn f() {
@@ -455,6 +480,24 @@ class ParserTest < Minitest::Test
     assert_instance_of FunctionType, t
     assert_equal 0, t.params.length
     assert_equal "void", t.ret.name
+  end
+
+  def test_packed_struct
+    prog = parse_ok("packed struct H { a: u8; b: u32; }")
+    decl = prog.decls[0]
+    assert decl.packed, "expected StructDecl to be packed"
+    assert_equal "H", decl.name
+    assert_equal 2, decl.fields.length
+  end
+
+  def test_packed_struct_after_export
+    prog = parse_ok("export packed struct H { a: u8; b: u32; }")
+    assert prog.decls[0].packed
+    assert prog.decls[0].exported
+  end
+
+  def test_packed_requires_struct
+    assert_parse_error("packed enum E { A, B }", /expected `struct` after `packed`/)
   end
 
   # ---------- sizeof / alignof / offsetof ----------

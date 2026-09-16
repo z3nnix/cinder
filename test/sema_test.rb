@@ -878,6 +878,38 @@ class SemaTest < Minitest::Test
 
   # ---------- sizeof / alignof / offsetof ----------
 
+  def test_asm_ok
+    ok("fn f() { let a: u64 = 1; let mut out: u64 = 0; asm(\"addq $1, $0\" : \"=r\"(out) : \"r\"(a)); }")
+  end
+
+  def test_asm_needs_mutable_output
+    err("fn f() { let a: u64 = 1; let out: u64 = 0; asm(\"\" : \"=r\"(out) : \"r\"(a)); }", /asm output must be a mutable lvalue/)
+  end
+
+  def test_asm_output_requires_directive
+    err("fn f() { let mut a: u64 = 0; asm(\"\" : \"r\"(a)); }", /asm output constraint must start with `=`/)
+  end
+
+  def test_asm_memory_operand_rejected
+    err("fn f() { let mut a: u32 = 0; asm(\"\" : \"=m\"(a)); }", /memory asm operands are not supported yet/)
+  end
+
+  def test_asm_readwrite_rejected
+    err("fn f() { let mut a: u32 = 0; asm(\"\" : \"+r\"(a)); }", /read-write asm operands/)
+  end
+
+  def test_asm_input_cannot_be_output
+    err("fn f() { let a: u32 = 1; asm(\"\" : : \"=r\"(a)); }", /asm input constraint must not start with `=`/)
+  end
+
+  def test_asm_void_output_rejected
+    err("fn g() { }\nfn f() { asm(\"\" : \"=r\"(g())); }", /asm output cannot be a void value/)
+  end
+
+  def test_asm_two_outputs_rejected
+    err("fn f() { let mut a: u32 = 0; let mut b: u32 = 0; asm(\"\" : \"=r\"(a), \"=r\"(b)); }", /only one asm output is supported/)
+  end
+
   def test_sizeof_primitive
     ok("fn main() { let s: usize = sizeof(i32); }")
   end
@@ -924,6 +956,33 @@ class SemaTest < Minitest::Test
 
   def test_static_assert_failure
     err("struct Pair { a: i32; b: u8; }\nstatic_assert(sizeof(struct Pair) == 4);\nfn main() { }", /static_assert failed/)
+  end
+
+  def test_packed_struct_layout
+    ok(<<~CND)
+      packed struct Hdr {
+        tag: u8;
+        size: u32;
+        flags: u16;
+      }
+      static_assert(sizeof(struct Hdr) == 7);
+      static_assert(alignof(struct Hdr) == 1);
+      static_assert(offsetof(struct Hdr, size) == 1);
+      static_assert(offsetof(struct Hdr, flags) == 5);
+      fn main() { }
+    CND
+  end
+
+  def test_packed_struct_in_array
+    ok(<<~CND)
+      packed struct Item {
+        v: u8;
+        w: u16;
+      }
+      static_assert(sizeof(struct Item) == 3);
+      static_assert(sizeof([4]Item) == 12);
+      fn main() { }
+    CND
   end
 
   def test_static_assert_non_const_error

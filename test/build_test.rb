@@ -133,8 +133,23 @@ class BuildTest < Minitest::Test
     File.write(bad, "fn main() {\n    let a: u8 = 300;\n}\n")
     _out, err, st = run_cli("check", bad)
     refute_equal 0, st.exitstatus
-    assert_match(/bad\.cnd:2:17: error:/, err)
-    assert_match(/\|     let a: u8 = 300;\n\s*\| +\^/, err)
+    assert_match(/error:/, err)
+    assert_match(/--> .*bad\.cnd:2:17/, err)
+    assert_match(/2 \|     let a: u8 = 300;/, err)
+    assert_match(/\|\s+\^+/, err)
+  end
+
+  def test_warning_output_is_rust_style
+    file = File.join(@tmp, "warn.cnd")
+    File.write(file, "fn main() {\n    unsafe { }\n}\n")
+    _out, err, st = run_cli("check", file)
+    assert_equal 0, st.exitstatus, err
+    assert_match(/warning: 'unsafe' block is deprecated and has no effect/, err)
+    assert_match(/--> .*warn\.cnd:2:5/, err)
+    assert_match(/\^+/, err)
+    assert_match(/2 \|     unsafe \{/, err)
+    assert_match(/= note: see issue #3/, err)
+    assert_match(/= note: this block will be removed in a future version/, err)
   end
 
   def test_error_output_no_color_when_not_tty

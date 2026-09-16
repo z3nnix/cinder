@@ -28,11 +28,11 @@ module Cinder
       Options:
         -I <dir>               add module search directory (repeatable)
         --target=<arch>        target architecture (default: x86_64)
-        --emit=llvm|asm|obj|bin|kernel  output format (default: llvm)
+        --emit=llvm|asm|obj|bin|freestanding  output format (default: llvm)
         --mode=debug|release  build mode (default: debug)
-        --linker-script=<path> linker script for --emit=kernel
-        --boot=<file.s>       assembly boot stub to link into the kernel (e.g. multiboot entry)
-        --entry=<name>        kernel entry symbol (default: _start)
+        --linker-script=<path> linker script for --emit=freestanding
+        --boot=<file.s>       assembly boot stub to link into the freestanding image
+        --entry=<name>        freestanding entry symbol (default: _start)
         -o <file>              output file (default: <input>.ll/.s/.o/<input>)
         -v, --verbose          keep intermediate files (.ll/.s/.o) and print toolchain commands
         -h, --help             show this help
@@ -94,8 +94,9 @@ module Cinder
           verbose = true
         when /\A--target=(.+)\z/
           target = Regexp.last_match(1)
-        when /\A--emit=(llvm|asm|obj|bin|kernel)\z/
+        when /\A--emit=(llvm|asm|obj|bin|kernel|freestanding)\z/
           emit = Regexp.last_match(1)
+          emit = "freestanding" if emit == "kernel" # TODO: remove alias
         when /\A--mode=(debug|release)\z/
           mode = Regexp.last_match(1).to_sym
         when /\A--linker-script=(.+)\z/
@@ -122,8 +123,8 @@ module Cinder
         return 1
       end
 
-      if emit == "kernel" && linker_script.nil?
-        @stderr.puts "error: --emit=kernel requires --linker-script=<path>"
+      if emit == "freestanding" && linker_script.nil?
+        @stderr.puts "error: --emit=freestanding requires --linker-script=<path>"
         return 1
       end
 
@@ -162,23 +163,34 @@ module Cinder
       line_text = source_line(d.file, d.line)
       color = @stderr.respond_to?(:tty?) && @stderr.tty?
       label = d.warning? ? "warning" : "error"
-      out = +"#{d.file}:#{d.line}:#{d.col}: "
+      out = +""
       out << if color
                code = d.warning? ? "\e[1m\e[33m" : "\e[1m\e[31m"
                "#{code}#{label}:\e[0m #{d.message}"
              else
                "#{label}: #{d.message}"
              end
+      out << "\n  --> #{d.file}:#{d.line}:#{d.col}"
       if line_text
-        gutter = d.line.to_s
-        pad = " " * gutter.length
-        out << "\n"
-        out << "  #{gutter} | #{line_text}"
-        out << "\n"
-        caret = color ? "\e[1m\e[32m^\e[0m" : "^"
-        out << "  #{pad} | #{' ' * (d.col - 1)}#{caret}"
+        w = d.line.to_s.length
+        out << "\n  #{' ' * w} |"
+        out << "\n#{d.line} | #{line_text}"
+        caret = color ? "\e[1m\e[32m#{"^" * caret_len(d, line_text)}\e[0m" : "^" * caret_len(d, line_text)
+        out << "\n#{' ' * w} | #{' ' * (d.col - 1)}#{caret}"
+        out << "\n  #{' ' * w} |"
       end
+      d.notes.each { |n| out << "\n  = note: #{n}" }
       out
+    end
+
+    def caret_len(d, line_text)
+      return d.len if d.len > 1
+      tok = line_text[(d.col - 1)..]
+      if tok && tok.match?(/\A[A-Za-z0-9_]/)
+        tok[/\A[A-Za-z0-9_]+/].length
+      else
+        1
+      end
     end
 
     def source_line(file, line)
@@ -257,7 +269,7 @@ module Cinder
       end
 
       missing = %w[llc as cc].reject { |t| tool_available?(t) }
-      missing = %w[llc as ld objcopy].reject { |t| tool_available?(t) } if emit == "kernel"
+      missing = %w[llc as ld objcopy].reject { |t| tool_available?(t) } if emit == "freestanding"
       unless missing.empty?
         @stderr.puts "error: missing required tools: #{missing.join(', ')} (install LLVM + binutils + a C compiler)"
         return
@@ -281,9 +293,9 @@ module Cinder
           path = out || file.sub(/\.cnd\z/, "")
           ok = run_toolchain(ll_file, bin: path, mode: mode, tmp_files: tmp_files, verbose: verbose)
           @stdout.puts "wrote #{path}" if ok
-        when "kernel"
+        when "freestanding"
           path = out || file.sub(/\.cnd\z/, "")
-          ok = run_toolchain(ll_file, kernel: path, target: target, linker_script: linker_script,
+          ok = run_toolchain(ll_file, freestanding: path, target: target, linker_script: linker_script,
             boot: boot, entry: entry, mode: mode, tmp_files: tmp_files, verbose: verbose)
           @stdout.puts "wrote #{path}" if ok
         end
@@ -317,15 +329,15 @@ module Cinder
       path
     end
 
-    def run_toolchain(ll_file, obj: nil, bin: nil, kernel: nil, target: "x86_64", linker_script: nil,
+    def run_toolchain(ll_file, obj: nil, bin: nil, freestanding: nil, target: "x86_64", linker_script: nil,
       boot: nil, entry: "_start", mode: :debug, tmp_files: [], verbose: false)
       asm = ll_file.sub(/\.ll\.tmp\z/, ".s.tmp")
       obj_file = obj || "#{asm.sub(/\.s\.tmp\z/, "")}.o.tmp"
       tmp_files << asm << obj_file
       return false unless sh("llc", opt_flag(mode), "-filetype=asm", ll_file, "-o", asm, verbose: verbose)
       return false unless sh("as", asm, "-o", obj_file, verbose: verbose)
-      return true unless bin || kernel
-      if kernel
+      return true unless bin || freestanding
+      if freestanding
         objs = [obj_file]
         unless boot.nil?
           boot_obj = "#{obj_file}.boot.o.tmp"
@@ -334,10 +346,10 @@ module Cinder
           objs.unshift(boot_obj)
         end
         emul = Targets[target][:ld_emulation]
-        linked = "#{kernel}.elf64.tmp"
+        linked = "#{freestanding}.elf64.tmp"
         tmp_files << linked
         return false unless sh("ld", "-m", emul, "-T", linker_script, "--entry=#{entry}", "-o", linked, *objs, verbose: verbose)
-        sh("objcopy", "-O", "elf32-i386", linked, kernel, verbose: verbose)
+        sh("objcopy", "-O", "elf32-i386", linked, freestanding, verbose: verbose)
       else
         sh("cc", "-no-pie", obj_file, "-lm", "-o", bin, verbose: verbose)
       end

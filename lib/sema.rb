@@ -696,7 +696,10 @@ module Cinder
     def check_fn(decl)
       return unless decl.body
       if decl.unsafe
-        warn(decl, "'unsafe' function is deprecated and has no effect\nnote: see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details. this will be removed in a future version.")
+        warn(decl, "'unsafe' function is deprecated and has no effect",
+          notes: ["see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details",
+                  "this will be removed in a future version"],
+          len: "unsafe".length)
       end
       ctx = Context.new
       ctx.fn = decl
@@ -760,7 +763,10 @@ module Cinder
       when DeferStmt
         check_stmt(node.stmt, ctx)
       when UnsafeBlock
-        warn(node, "'unsafe' block is deprecated and has no effect\nnote: see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details. this block will be removed in a future version.", ctx.module_file)
+        warn(node, "'unsafe' block is deprecated and has no effect", ctx.module_file,
+          notes: ["see issue #3 (https://github.com/z3nnix/cinder/issues/3) for details",
+                  "this block will be removed in a future version"],
+          len: "unsafe".length)
         check_stmt(node.block, ctx)
       when AsmStmt
         # inline assembly is allowed everywhere
@@ -1065,7 +1071,7 @@ module Cinder
         report(node, "range expression is only allowed in `for` loops and switch patterns", ctx && ctx.module_file)
         UNKNOWN
       when AsmExpr
-        UNKNOWN
+        infer_asm(node, ctx)
       when SizeofExpr
         infer_sizeof(node, ctx)
       when AlignofExpr
@@ -1074,6 +1080,45 @@ module Cinder
         infer_offsetof(node, ctx)
       else
         UNKNOWN
+      end
+    end
+
+    def infer_asm(node, ctx)
+      if node.outputs.length > 1
+        report(node, "only one asm output is supported", ctx.module_file)
+      end
+      node.outputs.each do |o|
+        validate_asm_constraint(o, is_output: true, ctx: ctx)
+        expr = o[:expr]
+        t = infer_expr(expr, ctx)
+        if t.nil?
+          report(expr, "asm output cannot be a void value", ctx.module_file)
+        elsif !writable?(expr, ctx)
+          report(expr, "asm output must be a mutable lvalue", ctx.module_file)
+        end
+        o[:sema_type] = t
+      end
+      node.inputs.each do |o|
+        validate_asm_constraint(o, is_output: false, ctx: ctx)
+        o[:sema_type] = infer_expr(o[:expr], ctx)
+      end
+      out = node.outputs[0]
+      out ? out[:sema_type] : UNKNOWN
+    end
+
+    def validate_asm_constraint(op, is_output:, ctx:)
+      c = op[:constraint]
+      if c.include?("+")
+        report(op[:expr], "read-write asm operands (`+`) are not supported yet", ctx.module_file)
+      elsif is_output
+        unless c.start_with?("=")
+          report(op[:expr], "asm output constraint must start with `=`", ctx.module_file)
+        end
+        if c.include?("m")
+          report(op[:expr], "memory asm operands are not supported yet", ctx.module_file)
+        end
+      elsif c.start_with?("=")
+        report(op[:expr], "asm input constraint must not start with `=`", ctx.module_file)
       end
     end
 
@@ -1800,12 +1845,12 @@ module Cinder
       ctx.loop_depth -= 1
     end
 
-    def report(node, message, file = nil)
-      @reporter.report(file || node.module_file || "<input>", node.line, node.col, message)
+    def report(node, message, file = nil, notes: [], len: 1)
+      @reporter.report(file || node.module_file || "<input>", node.line, node.col, message, notes: notes, len: len)
     end
 
-    def warn(node, message, file = nil)
-      @reporter.warn(file || node.module_file || "<input>", node.line, node.col, message)
+    def warn(node, message, file = nil, notes: [], len: 1)
+      @reporter.warn(file || node.module_file || "<input>", node.line, node.col, message, notes: notes, len: len)
     end
 
     public

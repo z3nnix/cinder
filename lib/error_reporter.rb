@@ -1,13 +1,15 @@
 module Cinder
   class Diagnostic
-    attr_reader :file, :line, :col, :message, :level
+    attr_reader :file, :line, :col, :message, :level, :notes, :len
 
-    def initialize(file, line, col, message, level: :error)
+    def initialize(file, line, col, message, level: :error, notes: [], len: 1)
       @file = file
       @line = line
       @col = col
       @message = message
       @level = level
+      @notes = notes
+      @len = len
     end
 
     def error?
@@ -39,12 +41,12 @@ module Cinder
       @diagnostics = []
     end
 
-    def report(file, line, col, message)
-      @diagnostics << Diagnostic.new(file, line, col, message)
+    def report(file, line, col, message, notes: [], len: 1)
+      @diagnostics << Diagnostic.new(file, line, col, message, notes: notes, len: len)
     end
 
-    def warn(file, line, col, message)
-      @diagnostics << Diagnostic.new(file, line, col, message, level: :warning)
+    def warn(file, line, col, message, notes: [], len: 1)
+      @diagnostics << Diagnostic.new(file, line, col, message, level: :warning, notes: notes, len: len)
     end
 
     def error?

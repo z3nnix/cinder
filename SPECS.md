@@ -947,6 +947,29 @@ asm("wfi");
 asm("hlt");
 ```
 
+### 15.1 Operands
+
+Operands follow the GCC inline-asm convention.
+
+Outputs come after the first colon; inputs come after the second.
+Constraints are quoted strings before each operand in parentheses.
+
+`=` at the start of a constraint marks a write-only output.
+The output must be a mutable variable, pointer dereference, or index expression.
+Memory operands (`=m`) and read-write operands (`+`) are not yet supported.
+
+```cinder
+let mut out: u64 = 0;
+asm("movq $1, $0" : "=r"(out) : "r"(42u64));
+
+let mut a: i32 = 10;
+let mut b: i32 = 20;
+let mut sum: i32 = 0;
+asm("addl $1, $2, $0" : "=r"(sum) : "r"(a), "r"(b));
+```
+
+The result of the expression is the output value.
+
 ---
 
 ## 16. Modules
@@ -1020,11 +1043,11 @@ The script `cinder` runs `main.rb`.
 |--------|---------|
 | `-I <dir>` | add a module search directory, repeatable |
 | `--target=<arch>` | target architecture, default `x86_64` |
-| `--emit=llvm\|asm\|obj\|bin\|kernel` | output format, default `llvm` |
+| `--emit=llvm\|asm\|obj\|bin\|freestanding` | output format, default `llvm` |
 | `--mode=debug\|release` | build mode, default `debug` |
-| `--linker-script=<path>` | linker script for `--emit=kernel` |
-| `--boot=<file.s>` | assembly boot stub for `--emit=kernel` |
-| `--entry=<name>` | kernel entry symbol, default `_start` |
+| `--linker-script=<path>` | linker script for `--emit=freestanding` |
+| `--boot=<file.s>` | assembly boot stub for `--emit=freestanding` |
+| `--entry=<name>` | freestanding entry symbol, default `_start` |
 | `-o <file>` | output file name |
 | `-v`, `--verbose` | keep intermediate files, print toolchain commands |
 | `-h`, `--help` | print the help text |
@@ -1043,7 +1066,7 @@ cinder build main.cnd --emit=bin -o main
 
 # generate a freestanding kernel image
 cinder build main.cnd --target=x86_64-freestanding \
-    --emit=kernel --linker-script=linker.ld --boot=boot.s -o kernel.bin
+    --emit=freestanding --linker-script=linker.ld --boot=boot.s -o kernel.bin
 ```
 
 ### 17.4 Build Modes
@@ -1057,7 +1080,7 @@ In release mode, the compiler omits the bounds checks.
 
 ### 17.5 Toolchain
 
-The compiler needs these tools for `--emit=asm`, `obj`, `bin`, and `kernel`:
+The compiler needs these tools for `--emit=asm`, `obj`, `bin`, and `freestanding`:
 
 | Tool | Source |
 |------|--------|

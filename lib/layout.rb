@@ -89,12 +89,17 @@ module Cinder
       cum = 0
       struct_align = 1
       decl.fields.each do |f|
-        a = align(f.type)
-        struct_align = a if a > struct_align
-        off = align_up(cum, a)
+        if decl.packed
+          off = cum
+        else
+          a = align(f.type)
+          struct_align = a if a > struct_align
+          off = align_up(cum, a)
+        end
         offsets << off
         cum = off + size(f.type)
       end
+      struct_align = 1 if decl.packed
       result = [align_up(cum, struct_align), offsets, struct_align]
       @struct_cache[decl] = result
       result

@@ -24,8 +24,8 @@ class BaremetalTest < Minitest::Test
   def test_kernel_builds_multiboot_elf
     skip "kernel toolchain not available" unless FULL_TOOLCHAIN
     out = File.join(@tmp, "kernel.bin")
-    stdout, stderr, status = Open3.capture3(RbConfig.ruby, MAIN, "build", KERNEL,
-      "--target=x86_64-freestanding", "--emit=kernel", "--linker-script=#{LINKER}",
+stdout, stderr, status = Open3.capture3(RbConfig.ruby, MAIN, "build", KERNEL,
+      "--target=x86_64-freestanding", "--emit=freestanding", "--linker-script=#{LINKER}",
       "--boot=#{BOOT}", "-o", out)
     assert_equal 0, status.exitstatus, "#{stdout}\n#{stderr}"
     assert File.exist?(out)

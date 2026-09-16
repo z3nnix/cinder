@@ -13,12 +13,10 @@ fn main() -> i32 {
     putchar(10);
 
     let p = malloc(64);
-    unsafe {
-        p[0] = 65;
-        p[1] = 66;
-        p[2] = 67;
-        p[3] = 0;
-    }
+    p[0] = 65;
+    p[1] = 66;
+    p[2] = 67;
+    p[3] = 0;
     let lbl_malloc: []u8 = "malloc buffer via printf: ";
     print(&lbl_malloc, .S);
     printf(c"%s\n", p);

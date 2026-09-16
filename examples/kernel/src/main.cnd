@@ -5,9 +5,7 @@ use "arch/x86/vga.cnd";
 use "lib/io.cnd";
 
 fn early_init() {
-    unsafe {
-        uart_init();
-    }
+    uart_init();
 
     vga_init();
 }

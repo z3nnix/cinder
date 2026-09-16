@@ -19,7 +19,7 @@ fn vga_idx(row: i32, col: i32) -> usize inline {
     return (row * VGA_WIDTH + col) as usize;
 }
 
-unsafe fn vga_putch(ch: u8) {
+fn vga_putch(ch: u8) {
     let video = 0xB8000 as *u16;
     let idx = vga_idx(CURSOR_Y, CURSOR_X);
     let cell = (COLOR as u16) << 8 | (ch as u16);
@@ -36,9 +36,7 @@ unsafe fn vga_putch(ch: u8) {
 }
 
 export fn vga_print(str: []u8) {
-    unsafe {
-        for ch in str {
-            vga_putch(ch);
-        }
+    for ch in str {
+        vga_putch(ch);
     }
 }

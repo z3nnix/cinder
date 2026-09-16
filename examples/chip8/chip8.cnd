@@ -65,10 +65,8 @@ export fn chip8_new() -> Chip8 {
 }
 
 export fn chip8_free(c: *Chip8) {
-    unsafe {
-        free(c.mem);
-        free(c.fb);
-    }
+    free(c.mem);
+    free(c.fb);
 }
 
 export fn load_rom(c: *Chip8, rom: []u8) {
@@ -78,28 +76,26 @@ export fn load_rom(c: *Chip8, rom: []u8) {
 }
 
 fn mem_rd(c: *Chip8, addr: u16) -> u8 {
-    unsafe { return c.mem[addr]; }
+    return c.mem[addr];
 }
 
 fn mem_wr(c: *Chip8, addr: u16, b: u8) {
-    unsafe { c.mem[addr] = b; }
+    c.mem[addr] = b;
 }
 
 fn fb_get(c: *Chip8, x: u8, y: u8) -> u8 {
     if x >= WIDTH { return 0; }
     if y >= HEIGHT { return 0; }
-    unsafe { return c.fb[(y as u16) * WIDTH + (x as u16)]; }
+    return c.fb[(y as u16) * WIDTH + (x as u16)];
 }
 
 fn fb_set(c: *Chip8, x: u8, y: u8, b: u8) {
-    unsafe { c.fb[(y as u16) * WIDTH + (x as u16)] = b; }
+    c.fb[(y as u16) * WIDTH + (x as u16)] = b;
 }
 
 export fn clear_screen(c: *Chip8) {
-    unsafe {
-        for i in 0u16..2048u16 {
-            c.fb[i] = 0;
-        }
+    for i in 0u16..2048u16 {
+        c.fb[i] = 0;
     }
 }
 

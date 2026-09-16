@@ -1,18 +1,14 @@
 use "std/io.cnd";
 
 fn bump(p: *i32) -> i32 {
-    unsafe {
-        *p += 10;
-        return *p;
-    }
+    *p += 10;
+    return *p;
 }
 
 fn swap(a: *i32, b: *i32) {
-    unsafe {
-        let t = *a;
-        *a = *b;
-        *b = t;
-    }
+    let t = *a;
+    *a = *b;
+    *b = t;
 }
 
 fn main() -> i32 {
@@ -44,14 +40,12 @@ fn main() -> i32 {
 
     let s = "hello";
     let p = s.ptr;
-    unsafe {
-        let first = *p;
-        let lbl_first: []u8 = "first byte of \"hello\" = ";
-        print(&lbl_first, .S);
-        let first_i32: i32 = first as i32;
-        print(&first_i32, .I32);
-        putchar(10);
-    }
+    let first = *p;
+    let lbl_first: []u8 = "first byte of \"hello\" = ";
+    print(&lbl_first, .S);
+    let first_i32: i32 = first as i32;
+    print(&first_i32, .I32);
+    putchar(10);
     let lbl_len: []u8 = "len(\"hello\") = ";
     print(&lbl_len, .S);
     let len_i32: i32 = s.len as i32;

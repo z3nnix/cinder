@@ -1,5 +1,3 @@
 export fn cpu_idle() -> i32 inline {
-    unsafe {
-        loop { asm("hlt"); }
-    }
+    loop { asm("hlt"); }
 }

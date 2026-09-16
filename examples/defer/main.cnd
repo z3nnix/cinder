@@ -5,10 +5,8 @@ fn use_resource() {
     let ptr = alloc(1024);
     defer dealloc(ptr);  
     
-    unsafe {
-        ptr[0] = 42; 
-        ptr[1] = 43;
-    }
+    ptr[0] = 42; 
+    ptr[1] = 43;
 }
 
 fn main() -> i32 {
